@@ -1,0 +1,19 @@
+{
+  "name": "dropzone-casebattle",
+  "version": "1.0.0",
+  "description": "CS2 Case Battle com login Steam",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "axios": "^1.16.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "express-session": "^1.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

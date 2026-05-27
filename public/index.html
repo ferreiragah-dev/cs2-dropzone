@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DROPZONE — Case Battle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg-deep:#080B10;--bg-panel:#0D1117;--bg-card:#131A22;--bg-hover:#1A2432;--border:#1E2D3D;--border-glow:#2A4060;--accent:#00D4FF;--gold:#FFD700;--green:#00FF8C;--text:#E8EDF2;--text-muted:#6B8099;--text-dim:#3A5068;--red:#FF3B3B;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg-deep);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 0%,rgba(0,212,255,.04) 0%,transparent 60%),radial-gradient(ellipse 50% 30% at 80% 100%,rgba(155,77,255,.04) 0%,transparent 60%);pointer-events:none;z-index:0;}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;height:60px;gap:1.5rem;}
+.logo{font-family:'Orbitron',monospace;font-weight:900;font-size:18px;letter-spacing:3px;color:var(--accent);text-shadow:0 0 20px rgba(0,212,255,.5);flex-shrink:0;cursor:pointer;}
+.logo span{color:var(--text);}
+.nav-links{display:flex;gap:.2rem;flex:1;}
+.nav-links a{font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;padding:.4rem .9rem;color:var(--text-muted);text-decoration:none;border-radius:4px;transition:all .2s;cursor:pointer;}
+.nav-links a:hover,.nav-links a.active{color:var(--accent);background:rgba(0,212,255,.07);}
+.nav-right{display:flex;align-items:center;gap:.75rem;margin-left:auto;}
+.balance-pill{display:flex;align-items:center;gap:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:.3rem .75rem;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);cursor:pointer;transition:all .2s;}
+.balance-pill:hover{border-color:var(--gold);}
+.balance-pill::before{content:'●';font-size:8px;}
+
+/* BTNS */
+.btn-primary{background:var(--accent);color:#000;border:none;border-radius:6px;padding:.4rem 1.25rem;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.btn-primary:hover{background:#33DDFF;box-shadow:0 0 16px rgba(0,212,255,.4);}
+.btn-ghost{background:transparent;border:1px solid var(--border);border-radius:6px;padding:.4rem 1.1rem;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);cursor:pointer;transition:all .2s;}
+.btn-ghost:hover{border-color:var(--border-glow);color:var(--text);}
+.btn-danger{background:transparent;border:1px solid rgba(255,59,59,.4);border-radius:6px;padding:.4rem 1.1rem;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--red);cursor:pointer;transition:all .2s;}
+.btn-danger:hover{background:rgba(255,59,59,.08);border-color:var(--red);}
+
+/* STEAM BTN */
+.btn-steam{display:flex;align-items:center;gap:10px;background:#1B2838;border:1px solid #2a475e;border-radius:8px;padding:.65rem 1.5rem;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#c7d5e0;cursor:pointer;transition:all .25s;width:100%;justify-content:center;text-decoration:none;}
+.btn-steam:hover{background:#2a3f55;border-color:#66c0f4;color:#fff;box-shadow:0 0 20px rgba(102,192,244,.2);}
+.steam-icon{width:22px;height:22px;flex-shrink:0;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-panel);border:1px solid var(--border-glow);border-radius:14px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,212,255,.07);animation:modalIn .22s ease;}
+.modal.wide{max-width:860px;}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);}
+.modal-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--accent);}
+.modal-close{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:16px;transition:all .2s;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-body{padding:1.5rem;}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.75rem;justify-content:flex-end;}
+
+/* LOGIN */
+.login-hero{text-align:center;margin-bottom:2rem;}
+.login-logo{font-family:'Orbitron',monospace;font-weight:900;font-size:28px;letter-spacing:4px;color:var(--accent);text-shadow:0 0 30px rgba(0,212,255,.4);margin-bottom:.25rem;}
+.login-logo span{color:var(--text);}
+.login-sub{font-size:13px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
+.login-info{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:12px;color:var(--text-dim);line-height:1.7;}
+.login-info li{margin-left:1rem;}
+.login-err{background:rgba(255,59,59,.07);border:1px solid rgba(255,59,59,.25);border-radius:7px;padding:.75rem 1rem;font-size:13px;color:var(--red);margin-bottom:1rem;display:none;}
+.login-err.show{display:block;}
+
+/* TRADE LINK */
+.step-indicator{display:flex;align-items:center;gap:.5rem;margin-bottom:1.5rem;}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.step-dot.done{background:rgba(0,255,140,.1);border:1px solid rgba(0,255,140,.3);color:var(--green);}
+.step-dot.active{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.4);color:var(--accent);}
+.step-dot.pending{background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);}
+.step-line{flex:1;height:1px;background:var(--border);}
+.step-line.done{background:rgba(0,255,140,.3);}
+.tl-input{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:.65rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);outline:none;transition:all .2s;}
+.tl-input:focus{border-color:var(--accent);}
+.tl-input::placeholder{color:var(--text-dim);}
+.tl-hint{font-size:11px;color:var(--text-dim);margin-top:.4rem;line-height:1.5;}
+.tl-hint a{color:var(--accent);text-decoration:none;}
+.section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);font-weight:600;margin-bottom:.75rem;}
+
+/* USER DROPDOWN */
+.user-nav-btn{display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:.3rem .75rem .3rem .4rem;cursor:pointer;transition:all .2s;}
+.user-nav-btn:hover{border-color:var(--border-glow);}
+.nav-avatar-img{width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border-glow);}
+.nav-avatar-initials{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;}
+.user-nav-name{font-size:13px;font-weight:600;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-nav-arrow{font-size:10px;color:var(--text-dim);}
+.user-dropdown{position:absolute;top:54px;right:0;background:var(--bg-panel);border:1px solid var(--border-glow);border-radius:10px;min-width:230px;padding:.5rem 0;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:150;display:none;animation:dropIn .15s ease;}
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.user-dropdown.open{display:block;}
+.dd-user-info{padding:.75rem 1rem .6rem;border-bottom:1px solid var(--border);}
+.dd-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--border-glow);margin-bottom:.5rem;object-fit:cover;}
+.dd-username{font-weight:700;font-size:15px;margin-bottom:2px;}
+.dd-steamid{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);}
+.dd-item{display:flex;align-items:center;gap:8px;padding:.55rem 1rem;cursor:pointer;color:var(--text-muted);font-size:13px;font-weight:600;letter-spacing:.5px;transition:all .15s;}
+.dd-item:hover{background:var(--bg-hover);color:var(--text);}
+.dd-item .ddi{font-size:15px;width:18px;text-align:center;}
+.dd-sep{height:1px;background:var(--border);margin:.3rem 0;}
+.dd-item.logout{color:var(--red);}
+.dd-item.logout:hover{background:rgba(255,59,59,.06);}
+.nav-right-wrap{position:relative;}
+
+/* STATS */
+.stats-bar{display:flex;gap:1rem;padding:.75rem 2rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.6);position:relative;z-index:1;}
+.stat-item{display:flex;align-items:center;gap:8px;font-size:12px;}
+.stat-dot{width:6px;height:6px;border-radius:50%;}
+.dot-green{background:var(--green);}
+.dot-blue{background:var(--accent);}
+.dot-gold{background:var(--gold);}
+.stat-label{color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+.stat-val{font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--text);}
+
+/* PAGES */
+.page{display:none;position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:2rem 2rem 4rem;}
+.page.active{display:block;}
+
+/* BATTLE PAGE */
+#pageBattle{max-width:1400px;}
+.hero{position:relative;z-index:1;padding:3rem 2rem 2rem;max-width:1400px;margin:0 auto;}
+.hero-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:2rem;}
+.hero-title{font-family:'Orbitron',monospace;font-weight:900;font-size:36px;line-height:1;letter-spacing:2px;}
+.hero-title .line2{color:var(--accent);font-size:20px;font-weight:400;letter-spacing:4px;display:block;margin-top:4px;}
+.live-badge{display:flex;align-items:center;gap:6px;background:rgba(255,59,59,.1);border:1px solid rgba(255,59,59,.3);border-radius:4px;padding:.3rem .75rem;font-size:12px;font-weight:700;letter-spacing:2px;color:var(--red);text-transform:uppercase;}
+.live-dot{width:7px;height:7px;background:var(--red);border-radius:50%;animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.filter-bar{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;}
+.filter-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);font-weight:600;margin-right:4px;}
+.filter-btn{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:.3rem .85rem;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px;}
+.filter-btn:hover{border-color:var(--border-glow);color:var(--text);}
+.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06);}
+.spacer{flex:1;}
+.btn-create{background:linear-gradient(135deg,#FF6B35,#FF3B3B);border:none;border-radius:6px;padding:.45rem 1.5rem;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:white;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.btn-create:hover{box-shadow:0 0 20px rgba(255,107,53,.4);transform:translateY(-1px);}
+.battles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:1rem;}
+.battle-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:all .25s;cursor:pointer;position:relative;}
+.battle-card:hover{border-color:var(--border-glow);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4);}
+.battle-card.active-battle::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 2s infinite;}
+@keyframes scan{0%{background-position:-200% center}100%{background-position:200% center}}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-bottom:1px solid var(--border);}
+.card-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+.card-status{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:2px 8px;border-radius:3px;}
+.s-open{color:var(--green);background:rgba(0,255,140,.08);border:1px solid rgba(0,255,140,.2);}
+.s-live{color:var(--accent);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);}
+.s-done{color:var(--text-muted);background:rgba(107,128,153,.08);border:1px solid rgba(107,128,153,.2);}
+.players-row{display:flex;align-items:center;padding:1rem;gap:.5rem;}
+.player-slot{flex:1;background:var(--bg-panel);border:1px dashed var(--border);border-radius:8px;padding:.75rem .5rem;text-align:center;min-width:0;}
+.player-slot.filled{border-style:solid;border-color:var(--border-glow);background:var(--bg-hover);}
+.player-slot.winner{border-color:var(--gold);background:rgba(255,215,0,.04);}
+.p-avatar{width:36px;height:36px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;overflow:hidden;}
+.p-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.p-avatar-init{width:36px;height:36px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;}
+.p-avatar-empty{width:36px;height:36px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--bg-card);border:1px dashed var(--border);color:var(--text-dim);}
+.player-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.player-value{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);margin-top:2px;}
+.empty-text{font-size:11px;color:var(--text-dim);letter-spacing:1px;}
+.vs-badge{flex-shrink:0;font-family:'Orbitron',monospace;font-weight:900;font-size:13px;color:var(--text-dim);background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;padding:4px 8px;}
+.cases-row{padding:.5rem 1rem;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.cases-row::-webkit-scrollbar{display:none;}
+.case-chip{flex-shrink:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-muted);}
+.case-icon{width:20px;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.ci-blue{background:rgba(0,212,255,.15);}
+.ci-purple{background:rgba(155,77,255,.15);}
+.ci-orange{background:rgba(255,107,53,.15);}
+.ci-gold{background:rgba(255,215,0,.12);}
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;border-top:1px solid var(--border);background:var(--bg-panel);}
+.total-value{display:flex;align-items:center;gap:6px;}
+.total-label{font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+.total-num{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:var(--gold);}
+.btn-join{background:transparent;border:1px solid var(--accent);border-radius:5px;padding:.3rem 1rem;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);cursor:pointer;transition:all .2s;}
+.btn-join:hover{background:rgba(0,212,255,.1);}
+.btn-watch{background:transparent;border:1px solid var(--border);border-radius:5px;padding:.3rem 1rem;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);cursor:pointer;transition:all .2s;}
+.btn-watch:hover{border-color:var(--border-glow);color:var(--text);}
+.page-wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 2rem 3rem;}
+.login-required-banner{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:2rem;text-align:center;margin-bottom:1.5rem;}
+.lrb-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--accent);margin-bottom:.5rem;}
+.lrb-sub{font-size:13px;color:var(--text-muted);margin-bottom:1rem;}
+
+/* PROFILE PAGE */
+.profile-header{display:flex;align-items:flex-end;gap:1.5rem;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);}
+.profile-avatar-wrap{position:relative;flex-shrink:0;}
+.profile-avatar-img{width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--border-glow);}
+.profile-level-badge{position:absolute;bottom:-4px;right:-4px;background:var(--accent);color:#000;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:1px;}
+.profile-info{flex:1;}
+.profile-name{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;letter-spacing:2px;margin-bottom:4px;}
+.profile-steam-link{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);text-decoration:none;font-family:'IBM Plex Mono',monospace;margin-bottom:.75rem;}
+.profile-steam-link:hover{color:#66c0f4;}
+.profile-tags{display:flex;gap:.5rem;flex-wrap:wrap;}
+.profile-tag{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:3px;}
+.tag-verified{background:rgba(0,255,140,.08);border:1px solid rgba(0,255,140,.25);color:var(--green);}
+.tag-steam{background:rgba(27,40,56,.8);border:1px solid #2a475e;color:#66c0f4;}
+.tag-trader{background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);color:var(--accent);}
+.tag-private{background:rgba(255,59,59,.07);border:1px solid rgba(255,59,59,.2);color:var(--red);}
+.profile-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:2rem;}
+.pstat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;}
+.pstat-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+.pstat-val{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:500;}
+.pstat-val.gold{color:var(--gold);}
+.pstat-val.green{color:var(--green);}
+.pstat-val.accent{color:var(--accent);}
+.pstat-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+/* TABS */
+.tab-nav{display:flex;gap:.25rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);}
+.tab-btn{padding:.6rem 1.25rem;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* SETTINGS */
+.settings-section{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem;}
+.settings-title{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.settings-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid rgba(30,45,61,.5);}
+.setting-row:last-child{border-bottom:none;}
+.setting-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:1px;}
+.setting-desc{font-size:12px;color:var(--text-dim);}
+.setting-val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);max-width:260px;text-align:right;word-break:break-all;}
+.setting-val.ok{color:var(--green);}
+
+/* TOGGLE */
+.toggle{position:relative;width:42px;height:22px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-track{position:absolute;inset:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .2s;}
+.toggle input:checked+.toggle-track{background:rgba(0,212,255,.2);border-color:var(--accent);}
+.toggle-thumb{position:absolute;width:14px;height:14px;background:var(--text-dim);border-radius:50%;top:3px;left:3px;transition:all .2s;}
+.toggle input:checked+.toggle-track .toggle-thumb{background:var(--accent);transform:translateX(20px);}
+
+/* TRADE LINK */
+.tl-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem;}
+.tl-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+.tl-card-title{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);font-weight:600;}
+.tl-badge-ok{font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:3px;background:rgba(0,255,140,.07);border:1px solid rgba(0,255,140,.2);color:var(--green);}
+.tl-badge-warn{font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:3px;background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.2);color:var(--gold);}
+.tl-display{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;margin-bottom:.75rem;word-break:break-all;display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.tl-copy{flex-shrink:0;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .15s;}
+.tl-copy:hover{border-color:var(--accent);color:var(--accent);}
+.tl-edit-row{display:flex;gap:.5rem;}
+.tl-edit-row input{flex:1;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:.55rem .9rem;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);outline:none;transition:all .2s;}
+.tl-edit-row input:focus{border-color:var(--accent);}
+.tl-save{background:var(--accent);color:#000;border:none;border-radius:6px;padding:.55rem 1.25rem;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.tl-save:hover{background:#33DDFF;}
+
+/* INVENTORY */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.75rem;}
+.inv-item{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:.75rem .5rem;text-align:center;transition:all .2s;cursor:pointer;position:relative;overflow:hidden;}
+.inv-item:hover{border-color:var(--border-glow);transform:translateY(-2px);}
+.inv-item::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+.inv-item-img{width:72px;height:56px;object-fit:contain;margin:0 auto 6px;display:block;}
+.inv-item-emoji{font-size:32px;margin-bottom:6px;}
+.inv-item-name{font-size:10px;font-weight:600;color:var(--text-muted);line-height:1.2;margin-bottom:3px;}
+.inv-item-type{font-size:10px;color:var(--text-dim);}
+.inv-not-tradable{position:absolute;top:4px;right:4px;font-size:9px;background:rgba(255,59,59,.15);color:var(--red);border-radius:2px;padding:1px 4px;letter-spacing:1px;}
+.inv-empty{text-align:center;padding:2rem;color:var(--text-dim);font-size:13px;}
+
+/* HISTORY */
+.hist-table{width:100%;border-collapse:collapse;}
+.hist-table th{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);font-weight:600;text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--border);}
+.hist-table td{padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(30,45,61,.4);}
+.hist-table tr:last-child td{border-bottom:none;}
+.hist-table tr:hover td{background:rgba(26,36,50,.4);}
+.hist-w{color:var(--green);font-weight:700;}
+.hist-l{color:var(--red);}
+.hist-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+.hist-prize{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);}
+.hist-date{font-size:12px;color:var(--text-dim);}
+
+/* SECURITY */
+.sec-item{display:flex;align-items:center;gap:1rem;padding:.75rem 0;border-bottom:1px solid rgba(30,45,61,.5);}
+.sec-item:last-child{border-bottom:none;}
+.sec-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sec-icon.ok{background:rgba(0,255,140,.08);border:1px solid rgba(0,255,140,.2);}
+.sec-icon.warn{background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);}
+.sec-name{font-size:14px;font-weight:600;color:var(--text);}
+.sec-desc{font-size:12px;color:var(--text-dim);}
+
+/* BATTLE MODAL */
+.arena-vs{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;}
+.arena-player{flex:1;text-align:center;}
+.arena-avatar{width:52px;height:52px;border-radius:50%;margin:0 auto 8px;border:2px solid var(--border);object-fit:cover;}
+.arena-avatar.highlight{border-color:var(--gold);box-shadow:0 0 16px rgba(255,215,0,.3);}
+.arena-name{font-weight:700;font-size:14px;margin-bottom:2px;}
+.arena-total{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);}
+.vs-big{font-family:'Orbitron',monospace;font-weight:900;font-size:24px;color:var(--border-glow);flex-shrink:0;}
+.spin-section{margin-bottom:1.5rem;}
+.spin-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:.5rem;}
+.reel-container{background:var(--bg-deep);border:1px solid var(--border);border-radius:8px;height:80px;overflow:hidden;position:relative;display:flex;align-items:center;}
+.reel-container::before,.reel-container::after{content:'';position:absolute;top:0;bottom:0;width:60px;z-index:2;}
+.reel-container::before{left:0;background:linear-gradient(90deg,var(--bg-deep),transparent);}
+.reel-container::after{right:0;background:linear-gradient(-90deg,var(--bg-deep),transparent);}
+.reel-pointer{position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--accent);transform:translateX(-50%);z-index:3;box-shadow:0 0 8px var(--accent);}
+.reel-items{display:flex;gap:6px;padding:0 1rem;will-change:transform;}
+.reel-item{flex-shrink:0;width:70px;height:68px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid transparent;font-size:11px;font-weight:600;text-align:center;padding:4px;line-height:1.2;}
+.ri-gray{background:rgba(107,128,153,.1);border-color:rgba(107,128,153,.2);}
+.ri-blue{background:rgba(0,100,220,.12);border-color:rgba(0,100,220,.3);}
+.ri-purple{background:rgba(155,77,255,.12);border-color:rgba(155,77,255,.3);}
+.ri-gold{background:rgba(255,215,0,.1);border-color:rgba(255,215,0,.3);}
+.reel-item-emoji{font-size:20px;margin-bottom:2px;}
+.reel-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);}
+.spin-btn-wrap{text-align:center;margin-top:.75rem;}
+.btn-spin{background:linear-gradient(135deg,var(--accent),#0099CC);border:none;border-radius:6px;padding:.6rem 2.5rem;font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:3px;color:#000;cursor:pointer;transition:all .2s;}
+.btn-spin:hover{box-shadow:0 0 24px rgba(0,212,255,.5);transform:translateY(-1px);}
+.btn-spin:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.win-banner{display:none;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:1rem;text-align:center;margin-top:1rem;}
+.win-banner.show{display:block;animation:winPop .4s ease;}
+@keyframes winPop{0%{opacity:0;transform:scale(.9)}60%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
+.win-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px;color:var(--gold);margin-bottom:4px;}
+.win-sub{font-size:13px;color:var(--text-muted);}
+
+/* CREATE */
+.cases-grid-modal{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:1.5rem;}
+.case-item{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.case-item:hover{border-color:var(--border-glow);}
+.case-item.selected{border-color:var(--accent);background:rgba(0,212,255,.05);}
+.case-item.selected::after{content:'✓';position:absolute;top:4px;right:6px;font-size:10px;color:var(--accent);font-weight:700;}
+.case-visual{width:56px;height:44px;margin:0 auto 6px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.case-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.2;margin-bottom:3px;}
+.case-price{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);}
+.qty-control{display:flex;align-items:center;gap:4px;margin-top:5px;justify-content:center;}
+.qty-btn{width:18px;height:18px;background:var(--bg-panel);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;}
+.qty-btn:hover{border-color:var(--accent);color:var(--accent);}
+.qty-val{font-family:'IBM Plex Mono',monospace;font-size:12px;min-width:18px;text-align:center;}
+.players-config{display:flex;gap:.5rem;margin-bottom:1.5rem;}
+.player-opt{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:.6rem;text-align:center;cursor:pointer;transition:all .2s;font-weight:600;font-size:13px;color:var(--text-muted);}
+.player-opt:hover{border-color:var(--border-glow);}
+.player-opt.selected{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.05);}
+.player-opt .opt-count{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;display:block;}
+.chosen-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.chosen-list{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+.chosen-pill{background:var(--bg-panel);border:1px solid var(--border-glow);border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--text-muted);}
+.chosen-total{font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--gold);font-weight:500;flex-shrink:0;}
+.btn-cancel{background:transparent;border:1px solid var(--border);border-radius:6px;padding:.5rem 1.5rem;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);cursor:pointer;transition:all .2s;}
+.btn-cancel:hover{border-color:var(--red);color:var(--red);}
+.btn-confirm{background:var(--accent);border:none;border-radius:6px;padding:.5rem 1.75rem;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#000;cursor:pointer;transition:all .2s;}
+.btn-confirm:hover{background:#33DDFF;box-shadow:0 0 20px rgba(0,212,255,.4);}
+
+/* NOTIF */
+.notif{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg-card);border:1px solid var(--border-glow);border-radius:8px;padding:.75rem 1.25rem;font-size:13px;font-weight:600;z-index:400;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);max-width:300px;}
+.notif.show{transform:translateY(0);opacity:1;}
+.notif.success{border-color:var(--green);color:var(--green);}
+.notif.info{border-color:var(--accent);color:var(--accent);}
+.notif.error{border-color:var(--red);color:var(--red);}
+
+/* LOADING SCREEN */
+.loading-screen{position:fixed;inset:0;background:var(--bg-deep);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;}
+.loading-screen.hidden{display:none;}
+.ls-logo{font-family:'Orbitron',monospace;font-weight:900;font-size:32px;letter-spacing:4px;color:var(--accent);}
+.ls-logo span{color:var(--text);}
+.ls-bar{width:200px;height:2px;background:var(--border);border-radius:1px;overflow:hidden;}
+.ls-fill{height:100%;background:var(--accent);border-radius:1px;animation:lsFill 1.5s ease forwards;}
+@keyframes lsFill{from{width:0}to{width:100%}}
+.ls-text{font-size:12px;color:var(--text-dim);letter-spacing:2px;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg-deep);}
+::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:2px;}
+@media(max-width:700px){.hero-title{font-size:24px;}.battles-grid{grid-template-columns:1fr;}.page-wrap{padding:0 1rem 2rem;}.hero{padding:1.5rem 1rem 1rem;}.profile-header{flex-direction:column;align-items:flex-start;}.modal.wide{max-width:100%;}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="ls-logo">DROP<span>ZONE</span></div>
+  <div class="ls-bar"><div class="ls-fill"></div></div>
+  <div class="ls-text">CARREGANDO…</div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo" onclick="goHome()">DROP<span>ZONE</span></div>
+  <div class="nav-links">
+    <a onclick="goHome()" id="navBattles" class="active">Batalhas</a>
+    <a onclick="notifInfo('Em breve!')">Caixas</a>
+    <a onclick="openProfile('history')">Histórico</a>
+    <a onclick="notifInfo('Em breve!')">Top Jogadores</a>
+  </div>
+  <div class="nav-right">
+    <div id="navGuest" style="display:flex;align-items:center;gap:.6rem;">
+      <a class="btn-steam" href="/auth/steam" style="width:auto;padding:.35rem 1rem;font-size:12px;">
+        <svg class="steam-icon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#1B2838"/><path d="M24 8C15.163 8 8 15.163 8 24c0 7.42 4.895 13.72 11.665 15.798l4.257-17.604A5.5 5.5 0 0124 18.5a5.5 5.5 0 015.5 5.5 5.5 5.5 0 01-5.5 5.5h-.183l-3.884 9.41C21.24 39.628 22.606 40 24 40c8.837 0 16-7.163 16-16S32.837 8 24 8z" fill="#c7d5e0"/></svg>
+        Entrar com Steam
+      </a>
+    </div>
+    <div id="navUser" style="display:none;align-items:center;gap:.75rem;">
+      <div class="balance-pill" id="balanceDisplay" onclick="openDeposit()">R$ 0,00</div>
+      <button class="btn-primary" onclick="openDeposit()" style="padding:.35rem .9rem;font-size:12px;">+ Saldo</button>
+      <div style="position:relative;" class="nav-right-wrap">
+        <div class="user-nav-btn" onclick="toggleDd()" id="userNavBtn">
+          <div id="navAvatarWrap"></div>
+          <span class="user-nav-name" id="navNameEl">–</span>
+          <span class="user-nav-arrow">▾</span>
+        </div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dd-user-info">
+            <div id="ddAvatarWrap"></div>
+            <div class="dd-username" id="ddUsername">–</div>
+            <div class="dd-steamid" id="ddSteamId">–</div>
+          </div>
+          <div class="dd-item" onclick="openProfile();closeDd()"><span class="ddi">👤</span> Minha Conta</div>
+          <div class="dd-item" onclick="openProfile('inventory');closeDd()"><span class="ddi">🎒</span> Inventário CS2</div>
+          <div class="dd-item" onclick="openProfile('history');closeDd()"><span class="ddi">📋</span> Histórico</div>
+          <div class="dd-item" onclick="openProfile('settings');closeDd()"><span class="ddi">⚙️</span> Configurações</div>
+          <div class="dd-sep"></div>
+          <div class="dd-item logout" onclick="doLogout()"><span class="ddi">🚪</span> Sair</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- STATS -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-item"><div class="stat-dot dot-green"></div><span class="stat-label">Online</span><span class="stat-val" id="onlineCnt">847</span></div>
+  <div class="stat-item"><div class="stat-dot dot-blue"></div><span class="stat-label">Batalhas Ativas</span><span class="stat-val" id="activeCnt">12</span></div>
+  <div class="stat-item"><div class="stat-dot dot-gold"></div><span class="stat-label">Ganho Total Hoje</span><span class="stat-val">R$ 184.320</span></div>
+</div>
+
+<!-- BATTLE PAGE -->
+<div id="pageBattle" class="page active" style="max-width:1400px;padding:0;">
+  <div class="hero">
+    <div class="hero-top">
+      <div class="hero-title">CASE BATTLE<span class="line2">ABRA · APOSTE · VENÇA</span></div>
+      <div class="live-badge"><div class="live-dot"></div>Ao Vivo</div>
+    </div>
+    <div class="filter-bar">
+      <span class="filter-label">Filtros</span>
+      <button class="filter-btn active" onclick="filterBattles('all',this)">Todas</button>
+      <button class="filter-btn" onclick="filterBattles('open',this)">Abertas</button>
+      <button class="filter-btn" onclick="filterBattles('live',this)">Ao Vivo</button>
+      <button class="filter-btn" onclick="filterBattles('1v1',this)">1v1</button>
+      <button class="filter-btn" onclick="filterBattles('2v2',this)">2v2</button>
+      <div class="spacer"></div>
+      <button class="btn-create" onclick="requireAuth(openCreate)">⚔ Criar Batalha</button>
+    </div>
+  </div>
+  <div class="page-wrap">
+    <div id="loginBanner" style="display:none;" class="login-required-banner">
+      <div class="lrb-title">LOGIN NECESSÁRIO</div>
+      <div class="lrb-sub">Entre com sua conta Steam para criar ou participar de batalhas.</div>
+      <a class="btn-steam" href="/auth/steam" style="max-width:280px;margin:0 auto;">
+        <svg class="steam-icon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#1B2838"/><path d="M24 8C15.163 8 8 15.163 8 24c0 7.42 4.895 13.72 11.665 15.798l4.257-17.604A5.5 5.5 0 0124 18.5a5.5 5.5 0 015.5 5.5 5.5 5.5 0 01-5.5 5.5h-.183l-3.884 9.41C21.24 39.628 22.606 40 24 40c8.837 0 16-7.163 16-16S32.837 8 24 8z" fill="#c7d5e0"/></svg>
+        Entrar com Steam
+      </a>
+    </div>
+    <div class="battles-grid" id="battlesGrid"></div>
+  </div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="pageProfile" class="page">
+  <div id="profileHeader" class="profile-header"></div>
+  <div id="profileStats" class="profile-stats-row"></div>
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('overview',this)">Visão Geral</button>
+    <button class="tab-btn" onclick="switchTab('inventory',this)">Inventário CS2</button>
+    <button class="tab-btn" onclick="switchTab('history',this)">Histórico</button>
+    <button class="tab-btn" onclick="switchTab('settings',this)">Configurações</button>
+    <button class="tab-btn" onclick="switchTab('security',this)">Segurança</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-overview">
+    <div class="tl-card">
+      <div class="tl-card-header">
+        <span class="tl-card-title">Trade Link Steam</span>
+        <span id="tlBadgeOverview" class="tl-badge-warn">SEM LINK</span>
+      </div>
+      <div id="tlDisplayOverview" style="display:none;">
+        <div class="tl-display"><span id="tlTextOverview" style="word-break:break-all;flex:1;"></span><button class="tl-copy" onclick="copyTL()">Copiar</button></div>
+      </div>
+      <div class="tl-hint" style="margin-bottom:.75rem;">Necessário para receber skins. <a href="https://steamcommunity.com/id/me/tradeoffers/privacy" target="_blank">Encontre seu link aqui ↗</a></div>
+      <div class="tl-edit-row">
+        <input type="text" id="tlInputOverview" class="tl-input" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…&token=…">
+        <button class="tl-save" onclick="saveTradeLink('tlInputOverview')">Salvar</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Jogos Recentes (Steam)</div>
+      <div id="recentGamesEl" style="padding:.25rem 0;"></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Atividade na Plataforma</div>
+      <div id="recentActivityEl"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-inventory">
+    <div class="settings-section">
+      <div class="settings-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Inventário CS2</span>
+        <button class="btn-ghost" style="font-size:11px;padding:.25rem .75rem;" onclick="refreshInventory()">↻ Atualizar</button>
+      </div>
+      <div id="invGrid" class="inv-grid"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-history">
+    <div class="settings-section">
+      <div class="settings-title">Histórico de Batalhas</div>
+      <table class="hist-table">
+        <thead><tr><th>Batalha</th><th>Tipo</th><th>Resultado</th><th>Prêmio</th><th>Data</th></tr></thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-settings">
+    <div class="settings-section">
+      <div class="settings-title">Informações da Conta Steam</div>
+      <div class="setting-row">
+        <div><div class="setting-name">Nome de exibição</div><div class="setting-desc">Seu personaname na Steam</div></div>
+        <div class="setting-val" id="setName">–</div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-name">Nome real</div><div class="setting-desc">Informação do perfil público</div></div>
+        <div class="setting-val" id="setRealName">–</div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-name">Steam ID</div><div class="setting-desc">Identificador único 64-bit</div></div>
+        <div class="setting-val" id="setSteamId">–</div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-name">País</div><div class="setting-desc">Localização no perfil Steam</div></div>
+        <div class="setting-val" id="setCountry">–</div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-name">Nível Steam</div><div class="setting-desc">Seu nível atual na plataforma</div></div>
+        <div class="setting-val accent" id="setSteamLevel">–</div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Trade Link</div>
+      <div class="tl-edit-row" style="margin-bottom:.5rem;">
+        <input type="text" id="tlInputSettings" class="tl-input" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…">
+        <button class="tl-save" onclick="saveTradeLink('tlInputSettings')">Salvar</button>
+      </div>
+      <div class="tl-hint"><a href="https://steamcommunity.com/id/me/tradeoffers/privacy" target="_blank">Encontre seu Trade Link ↗</a></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Preferências</div>
+      <div class="setting-row">
+        <div><div class="setting-name">Sons nas batalhas</div><div class="setting-desc">Efeitos sonoros ao abrir caixas</div></div>
+        <label class="toggle"><input type="checkbox" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-name">Notificações de batalha</div><div class="setting-desc">Avisar quando sua batalha começar</div></div>
+        <label class="toggle"><input type="checkbox" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:.5rem;">
+      <button class="btn-danger" onclick="doLogout()">🚪 Sair da Conta</button>
+      <button class="btn-primary" onclick="notifSuccess('Configurações salvas! ✓')">Salvar</button>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-security">
+    <div class="settings-section">
+      <div class="settings-title">Status de Segurança</div>
+      <div class="sec-item">
+        <div class="sec-icon ok">🔐</div>
+        <div style="flex:1;"><div class="sec-name">Autenticação Steam OpenID</div><div class="sec-desc">Conta verificada via Steam — sessão ativa</div></div>
+        <span class="tl-badge-ok">✓ ATIVO</span>
+      </div>
+      <div class="sec-item">
+        <div class="sec-icon warn" id="tlSecIcon">🔗</div>
+        <div style="flex:1;"><div class="sec-name">Trade Link</div><div class="sec-desc" id="tlSecDesc">Configure para receber skins</div></div>
+        <span id="tlSecBadge" class="tl-badge-warn">PENDENTE</span>
+      </div>
+      <div class="sec-item">
+        <div class="sec-icon warn">📱</div>
+        <div style="flex:1;"><div class="sec-name">Steam Guard Mobile</div><div class="sec-desc">Recomendado para segurança dos trades</div></div>
+        <span class="tl-badge-warn">VERIFICAR</span>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Sessão Atual</div>
+      <div class="sec-item">
+        <div class="sec-icon ok">💻</div>
+        <div style="flex:1;"><div class="sec-name">Navegador atual</div><div class="sec-desc" id="sessionInfoEl">–</div></div>
+        <span style="font-size:11px;color:var(--green);">● ATIVA</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADE LINK SETUP (pos-login) -->
+<div class="modal-overlay" id="tradeLinkModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title">CONFIGURAR TRADE LINK</div>
+      <div class="modal-close" onclick="skipTL()">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="step-indicator">
+        <div class="step-dot done">✓</div><div class="step-line done"></div>
+        <div class="step-dot active">2</div><div class="step-line"></div>
+        <div class="step-dot pending">3</div>
+      </div>
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Configure seu Trade Link</div>
+        <div style="font-size:13px;color:var(--text-muted);">Necessário para receber skins ao vencer batalhas. Pode configurar depois.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div class="section-label">Seu Trade Link</div>
+        <input class="tl-input" type="text" id="tlSetupInput" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…&token=…">
+        <div class="tl-hint" style="margin-top:.4rem;">Acesse <a href="https://steamcommunity.com/id/me/tradeoffers/privacy" target="_blank">Privacidade de Trade ↗</a> e copie seu link pessoal.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="skipTL()">Configurar depois</button>
+      <button class="btn-confirm" onclick="confirmTLSetup()">Salvar e Continuar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEPOSIT MODAL -->
+<div class="modal-overlay" id="depositModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">ADICIONAR SALDO</div>
+      <div class="modal-close" onclick="closeModal('depositModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="section-label">Valor rápido</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:1rem;">
+        <button class="filter-btn" onclick="setDep(50)">R$ 50</button>
+        <button class="filter-btn" onclick="setDep(100)">R$ 100</button>
+        <button class="filter-btn" onclick="setDep(200)">R$ 200</button>
+        <button class="filter-btn" onclick="setDep(500)">R$ 500</button>
+        <button class="filter-btn" onclick="setDep(1000)">R$ 1.000</button>
+        <button class="filter-btn" onclick="setDep(2000)">R$ 2.000</button>
+      </div>
+      <div class="section-label">Ou outro valor</div>
+      <input class="tl-input" type="number" id="depInput" placeholder="0,00" min="10" max="9999" style="margin-bottom:.5rem;">
+      <div style="font-size:12px;color:var(--text-dim);">Demo — sem cobrança real.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('depositModal')">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmDeposit()">Depositar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE BATTLE MODAL -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <div class="modal-title">⚔ CRIAR NOVA BATALHA</div>
+      <div class="modal-close" onclick="closeModal('createModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="section-label">Número de jogadores</div>
+      <div class="players-config" id="playerConfig">
+        <div class="player-opt selected" data-val="2" onclick="selPlayers(2,this)"><span class="opt-count">2</span>Jogadores</div>
+        <div class="player-opt" data-val="3" onclick="selPlayers(3,this)"><span class="opt-count">3</span>Jogadores</div>
+        <div class="player-opt" data-val="4" onclick="selPlayers(4,this)"><span class="opt-count">4</span>Jogadores</div>
+      </div>
+      <div class="section-label">Selecione as caixas</div>
+      <div class="cases-grid-modal" id="casesGrid"></div>
+      <div class="section-label">Seleção</div>
+      <div class="chosen-bar">
+        <div class="chosen-list" id="chosenList"><span style="font-size:12px;color:var(--text-dim)">Nenhuma caixa</span></div>
+        <div class="chosen-total" id="chosenTotal">R$ 0,00</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('createModal')">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmCreate()">Criar Batalha →</button>
+    </div>
+  </div>
+</div>
+
+<!-- BATTLE MODAL -->
+<div class="modal-overlay" id="battleModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <div class="modal-title" id="battleModalTitle">BATALHA</div>
+      <div class="modal-close" onclick="closeBattle()">✕</div>
+    </div>
+    <div id="battleArena" style="padding:1.5rem;"></div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const CASES=[
+  {id:'prisma',name:'Prisma Case',price:8.90,emoji:'🔷',color:'ci-blue'},
+  {id:'revolution',name:'Revolution',price:25.50,emoji:'🌀',color:'ci-purple'},
+  {id:'dreams',name:'Dreams & Nightmares',price:41.20,emoji:'💜',color:'ci-purple'},
+  {id:'fracture',name:'Fracture Case',price:18.70,emoji:'🟠',color:'ci-orange'},
+  {id:'riptide',name:'Riptide Case',price:33.00,emoji:'🌊',color:'ci-blue'},
+  {id:'snakebite',name:'Snakebite Case',price:12.40,emoji:'🐍',color:'ci-gold'},
+  {id:'clutch',name:'Clutch Case',price:7.60,emoji:'🔥',color:'ci-orange'},
+  {id:'spectrum2',name:'Spectrum 2',price:55.00,emoji:'🌈',color:'ci-gold'},
+];
+const SKINS=[
+  {name:'AK-47 | Asiimov',val:180,emoji:'🔫',cl:'ri-purple'},
+  {name:'AWP | Medusa',val:320,emoji:'🐍',cl:'ri-gold'},
+  {name:'M4A4 | Howl',val:2800,emoji:'🐺',cl:'ri-gold'},
+  {name:'Glock | Fade',val:95,emoji:'💎',cl:'ri-blue'},
+  {name:'AK | Fire Serpent',val:650,emoji:'🐲',cl:'ri-gold'},
+  {name:'Butterfly | Fade',val:1200,emoji:'🦋',cl:'ri-gold'},
+  {name:'Desert Eagle',val:45,emoji:'🔫',cl:'ri-gray'},
+  {name:'P90 | Asiimov',val:38,emoji:'🔫',cl:'ri-blue'},
+];
+const NAMES=['xSniper99','KingOf_CS','br4zilFrag','dark_ace','ProFragger','n1troCS','sKullz_','clutchGod'];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let user=null;
+let balance=0;
+let tradeLink='';
+let battles=[];
+let selCases={};
+let selPlayers_=2;
+let spinActive=false;
+let currentFilter='all';
+let btlCounter=1000;
+let localHistory=[];
+
+const fmt=v=>'R$ '+v.toFixed(2).replace('.',',');
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const rndFrom=arr=>arr[rnd(0,arr.length-1)];
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init(){
+  try{
+    const r=await fetch('/api/me');
+    const d=await r.json();
+    if(d.loggedIn){
+      user=d.user;
+      tradeLink=user.tradeLink||'';
+      balance=rnd(500,3000); // demo balance
+      updateNavUser();
+      updateBattlePage();
+      // show trade link modal if no link configured
+      if(!tradeLink){
+        setTimeout(()=>document.getElementById('tradeLinkModal').classList.add('open'),600);
+      }
+      // show welcome if came from login
+      if(new URLSearchParams(window.location.search).get('welcome')==='1'){
+        showNotif('Bem-vindo, '+user.name+'! 🎮','success');
+        history.replaceState(null,'','/');
+      }
+    }
+    // check login error
+    if(new URLSearchParams(window.location.search).get('login_error')==='1'){
+      showNotif('Falha no login Steam. Tente novamente.','error');
+      history.replaceState(null,'','/');
+    }
+  }catch(e){console.warn('Offline/sem servidor:',e.message);}
+  initBattles();
+  document.getElementById('loadingScreen').classList.add('hidden');
+}
+
+// ─── USER DISPLAY ─────────────────────────────────────────────────────────────
+function updateNavUser(){
+  if(!user){
+    document.getElementById('navGuest').style.display='flex';
+    document.getElementById('navUser').style.display='none';
+    return;
+  }
+  document.getElementById('navGuest').style.display='none';
+  document.getElementById('navUser').style.display='flex';
+
+  const navAv=document.getElementById('navAvatarWrap');
+  const ddAv=document.getElementById('ddAvatarWrap');
+  const initials=(user.name||'??').slice(0,2).toUpperCase();
+
+  if(user.avatar){
+    navAv.innerHTML=`<img class="nav-avatar-img" src="${user.avatar}" alt="">`;
+    ddAv.innerHTML=`<img class="dd-avatar" src="${user.avatar}" alt="">`;
+  } else {
+    navAv.innerHTML=`<div class="nav-avatar-initials">${initials}</div>`;
+    ddAv.innerHTML=`<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;">${initials}</div>`;
+  }
+
+  document.getElementById('navNameEl').textContent=user.name||'Jogador';
+  document.getElementById('ddUsername').textContent=user.name||'–';
+  document.getElementById('ddSteamId').textContent=user.steamId||'–';
+  updateBalance();
+}
+
+function updateBalance(){
+  const el=document.getElementById('balanceDisplay');
+  if(el) el.textContent=fmt(balance);
+}
+
+function updateBattlePage(){
+  document.getElementById('loginBanner').style.display=user?'none':'block';
+}
+
+// ─── DROPDOWN ─────────────────────────────────────────────────────────────────
+function toggleDd(){document.getElementById('userDropdown').classList.toggle('open');}
+function closeDd(){document.getElementById('userDropdown').classList.remove('open');}
+document.addEventListener('click',e=>{
+  const btn=document.getElementById('userNavBtn');
+  const dd=document.getElementById('userDropdown');
+  if(btn&&!btn.contains(e.target)&&dd&&!dd.contains(e.target)) closeDd();
+});
+
+// ─── LOGOUT ───────────────────────────────────────────────────────────────────
+async function doLogout(){
+  closeDd();
+  try{ await fetch('/api/logout',{method:'POST'}); }catch{}
+  user=null;balance=0;tradeLink='';localHistory=[];
+  updateNavUser();updateBattlePage();goHome();
+  showNotif('Sessão encerrada.','info');
+}
+
+// ─── PROFILE ─────────────────────────────────────────────────────────────────
+function openProfile(tab='overview'){
+  if(!user){showNotif('Faça login para acessar seu perfil.','info');return;}
+  closeDd();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pageProfile').classList.add('active');
+  document.getElementById('statsBar').style.display='none';
+  renderProfileAll();
+  // activate tab
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  const btn=document.querySelector(`.tab-btn[onclick="switchTab('${tab}',this)"]`);
+  if(btn){btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');}
+  else{document.querySelector('.tab-btn').classList.add('active');document.getElementById('tab-overview').classList.add('active');}
+}
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+function renderProfileAll(){
+  if(!user) return;
+  // Header
+  const initials=(user.name||'??').slice(0,2).toUpperCase();
+  const avatarHTML=user.avatar
+    ?`<img class="profile-avatar-img" src="${user.avatar}" alt="${user.name}">`
+    :`<div class="profile-avatar-img" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;">${initials}</div>`;
+  const countryFlag=user.countryCode?` 🌎 ${user.countryCode}`:'';
+  document.getElementById('profileHeader').innerHTML=`
+    <div class="profile-avatar-wrap">
+      ${avatarHTML}
+      <div class="profile-level-badge">LVL ${user.steamLevel||0}</div>
+    </div>
+    <div class="profile-info">
+      <div class="profile-name">${user.name||'Jogador'}</div>
+      <a class="profile-steam-link" href="${user.profileUrl||'#'}" target="_blank">🔗 ${user.profileUrl||'–'}</a>
+      <div class="profile-tags">
+        <span class="profile-tag tag-verified">✓ Verificado</span>
+        <span class="profile-tag tag-steam">Steam${countryFlag}</span>
+        ${tradeLink?'<span class="profile-tag tag-trader">Trade Ativo</span>':''}
+        ${user.inventory&&user.inventory.length===0?'<span class="profile-tag tag-private">Inventário Privado</span>':''}
+      </div>
+    </div>
+    <div style="margin-left:auto;"><button class="btn-primary" onclick="openDeposit()">+ Adicionar Saldo</button></div>`;
+
+  // Stats
+  const wins=localHistory.filter(h=>h.result==='W').length;
+  const totalWon=localHistory.filter(h=>h.result==='W').reduce((s,h)=>s+h.prize,0);
+  const wr=localHistory.length?Math.round(wins/localHistory.length*100):0;
+  document.getElementById('profileStats').innerHTML=`
+    <div class="pstat-card"><div class="pstat-label">Saldo</div><div class="pstat-val gold">${fmt(balance)}</div><div class="pstat-sub">Disponível</div></div>
+    <div class="pstat-card"><div class="pstat-label">Nível Steam</div><div class="pstat-val accent">${user.steamLevel||0}</div><div class="pstat-sub">Plataforma Steam</div></div>
+    <div class="pstat-card"><div class="pstat-label">Batalhas</div><div class="pstat-val accent">${localHistory.length}</div><div class="pstat-sub">Total jogadas</div></div>
+    <div class="pstat-card"><div class="pstat-label">Win Rate</div><div class="pstat-val green">${wr}%</div><div class="pstat-sub">${wins} vitórias</div></div>
+    <div class="pstat-card"><div class="pstat-label">Total Ganho</div><div class="pstat-val gold">${fmt(totalWon)}</div><div class="pstat-sub">Em prêmios</div></div>`;
+
+  renderTradeLinkUI();
+  renderInventoryTab();
+  renderHistoryTab();
+  renderSettingsTab();
+  renderRecentGames();
+  renderRecentActivity();
+  document.getElementById('sessionInfoEl').textContent='Sessão iniciada hoje · '+new Date().toLocaleString('pt-BR');
+}
+
+function renderTradeLinkUI(){
+  const badge=document.getElementById('tlBadgeOverview');
+  const disp=document.getElementById('tlDisplayOverview');
+  const text=document.getElementById('tlTextOverview');
+  const inputOv=document.getElementById('tlInputOverview');
+  const inputSt=document.getElementById('tlInputSettings');
+  const secBadge=document.getElementById('tlSecBadge');
+  const secDesc=document.getElementById('tlSecDesc');
+  if(tradeLink){
+    if(badge){badge.className='tl-badge-ok';badge.textContent='✓ CONFIGURADO';}
+    if(disp) disp.style.display='block';
+    if(text) text.textContent=tradeLink;
+    if(inputOv) inputOv.value=tradeLink;
+    if(inputSt) inputSt.value=tradeLink;
+    if(secBadge){secBadge.className='tl-badge-ok';secBadge.textContent='✓ ATIVO';}
+    if(secDesc) secDesc.textContent='Trade Link configurado — pronto para receber itens';
+  } else {
+    if(badge){badge.className='tl-badge-warn';badge.textContent='SEM LINK';}
+    if(disp) disp.style.display='none';
+    if(secBadge){secBadge.className='tl-badge-warn';secBadge.textContent='PENDENTE';}
+    if(secDesc) secDesc.textContent='Configure seu Trade Link para receber itens';
+  }
+}
+
+function renderInventoryTab(){
+  const grid=document.getElementById('invGrid');
+  if(!grid) return;
+  const inv=user.inventory||[];
+  if(!inv.length){
+    grid.innerHTML=`<div class="inv-empty">
+      <div style="font-size:32px;margin-bottom:.5rem;">🔒</div>
+      <div style="margin-bottom:.5rem;">Inventário privado ou vazio</div>
+      <div style="font-size:12px;color:var(--text-dim);">Torne seu inventário público nas configurações da Steam<br>e clique em Atualizar.</div>
+      <button class="btn-ghost" style="margin-top:1rem;" onclick="refreshInventory()">↻ Tentar Atualizar</button>
+    </div>`;
+    return;
+  }
+  grid.innerHTML=inv.map(item=>{
+    const imgHTML=item.iconUrl
+      ?`<img class="inv-item-img" src="${item.iconUrl}" alt="${item.name}" onerror="this.style.display='none'">`
+      :`<div class="inv-item-emoji">🔫</div>`;
+    const rarityBorder=item.rarityColor?`border-bottom-color:${item.rarityColor};`:'';
+    const notTradable=!item.tradable?`<span class="inv-not-tradable">BLOQ</span>`:'';
+    return`<div class="inv-item" style="${rarityBorder}" title="${item.name}">
+      ${notTradable}
+      ${imgHTML}
+      <div class="inv-item-name">${item.name}</div>
+      <div class="inv-item-type">${item.type||item.weapon||''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function refreshInventory(){
+  showNotif('Atualizando inventário…','info');
+  try{
+    const r=await fetch('/api/inventory/refresh');
+    const d=await r.json();
+    if(d.error){showNotif('Inventário privado ou inacessível.','error');return;}
+    user.inventory=d.items;
+    renderInventoryTab();
+    showNotif(`${d.items.length} itens carregados! ✓`,'success');
+  }catch(e){showNotif('Erro ao atualizar inventário.','error');}
+}
+
+function renderHistoryTab(){
+  const tbody=document.getElementById('histBody');
+  if(!tbody) return;
+  if(!localHistory.length){
+    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:1.5rem;">Nenhuma batalha disputada ainda.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=localHistory.map(h=>`<tr>
+    <td class="hist-id">#${h.id}</td>
+    <td>${h.type}</td>
+    <td class="${h.result==='W'?'hist-w':'hist-l'}">${h.result==='W'?'VITÓRIA':'DERROTA'}</td>
+    <td class="hist-prize">${h.result==='W'?fmt(h.prize):'—'}</td>
+    <td class="hist-date">${h.date}</td>
+  </tr>`).join('');
+}
+
+function renderSettingsTab(){
+  if(!user) return;
+  document.getElementById('setName').textContent=user.name||'–';
+  document.getElementById('setRealName').textContent=user.realName||'–';
+  document.getElementById('setSteamId').textContent=user.steamId||'–';
+  document.getElementById('setCountry').textContent=user.countryCode||'–';
+  document.getElementById('setSteamLevel').textContent=user.steamLevel||0;
+}
+
+function renderRecentGames(){
+  const el=document.getElementById('recentGamesEl');
+  if(!el) return;
+  const games=user.recentGames||[];
+  if(!games.length){el.innerHTML=`<div style="font-size:13px;color:var(--text-dim);padding:.25rem 0;">Nenhum jogo recente visível (perfil privado).</div>`;return;}
+  el.innerHTML=games.map(g=>`
+    <div class="setting-row">
+      <div><div class="setting-name">${g.name}</div><div class="setting-desc">AppID: ${g.appid}</div></div>
+      <div class="setting-val">${g.playtime} nas últimas 2 semanas</div>
+    </div>`).join('');
+}
+
+function renderRecentActivity(){
+  const el=document.getElementById('recentActivityEl');
+  if(!el) return;
+  if(!localHistory.length){el.innerHTML=`<div style="font-size:13px;color:var(--text-dim);padding:.25rem 0;">Nenhuma atividade ainda. Jogue sua primeira batalha!</div>`;return;}
+  el.innerHTML=localHistory.slice(0,4).map(h=>`
+    <div class="setting-row">
+      <div><div class="setting-name">Batalha #${h.id} · ${h.type}</div><div class="setting-desc">${h.date}</div></div>
+      <div class="setting-val ${h.result==='W'?'ok':''}">${h.result==='W'?'+'+fmt(h.prize):'Derrota'}</div>
+    </div>`).join('');
+}
+
+// ─── TRADE LINK ───────────────────────────────────────────────────────────────
+async function saveTradeLink(inputId){
+  const val=(document.getElementById(inputId)||{}).value||'';
+  if(!val.trim()||!val.includes('steamcommunity.com/tradeoffer')){
+    showNotif('Cole um Trade Link válido da Steam.','error');return;
+  }
+  try{
+    await fetch('/api/tradelink',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tradeLink:val.trim()})});
+  }catch{}
+  tradeLink=val.trim();
+  if(user) user.tradeLink=tradeLink;
+  renderTradeLinkUI();
+  showNotif('Trade Link salvo! ✓','success');
+}
+
+function copyTL(){
+  navigator.clipboard.writeText(tradeLink).then(()=>showNotif('Link copiado!','success')).catch(()=>{});
+}
+
+function confirmTLSetup(){
+  const val=(document.getElementById('tlSetupInput')||{}).value||'';
+  if(!val.trim()||!val.includes('steamcommunity.com/tradeoffer')){
+    showNotif('Cole um Trade Link válido.','error');return;
+  }
+  fetch('/api/tradelink',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tradeLink:val.trim()})}).catch(()=>{});
+  tradeLink=val.trim();
+  if(user) user.tradeLink=tradeLink;
+  document.getElementById('tradeLinkModal').classList.remove('open');
+  renderTradeLinkUI();
+  showNotif('Trade Link salvo! Boas batalhas 🎮','success');
+}
+
+function skipTL(){
+  document.getElementById('tradeLinkModal').classList.remove('open');
+  showNotif('Configure o Trade Link nas configurações depois.','info');
+}
+
+// ─── DEPOSIT ─────────────────────────────────────────────────────────────────
+function openDeposit(){if(!user){showNotif('Faça login primeiro.','info');return;}document.getElementById('depositModal').classList.add('open');}
+function setDep(v){document.getElementById('depInput').value=v;}
+function confirmDeposit(){
+  const v=parseFloat(document.getElementById('depInput').value)||0;
+  if(v<10){showNotif('Mínimo: R$ 10,00','error');return;}
+  balance+=v;updateBalance();
+  closeModal('depositModal');
+  showNotif('R$ '+v.toFixed(2).replace('.',',')+'  adicionado! ✓','success');
+}
+
+// ─── PAGES ────────────────────────────────────────────────────────────────────
+function goHome(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pageBattle').classList.add('active');
+  document.getElementById('statsBar').style.display='flex';
+}
+
+function requireAuth(fn){if(!user){showNotif('Faça login com a Steam primeiro.','info');return;}fn();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ─── BATTLES ─────────────────────────────────────────────────────────────────
+function genBattle(status,playerCount){
+  const cases=[];const n=rnd(1,4);for(let i=0;i<n;i++) cases.push(rndFrom(CASES));
+  const total=cases.reduce((s,c)=>s+c.price,0)*playerCount;
+  const players=[];
+  for(let i=0;i<playerCount;i++){
+    const filled=status==='done'||status==='live'||(status==='open'&&i===0);
+    players.push(filled?{name:rndFrom(NAMES),avatar:null}:null);
+  }
+  return{id:++btlCounter,status,playerCount,players,cases,total,winnerIdx:status==='done'?rnd(0,playerCount-1):null};
+}
+
+function initBattles(){
+  battles=[];
+  ['open','open','live','open','done','open','live','done'].forEach((s,i)=>battles.push(genBattle(s,[2,2,2,3,2,4,3,4][i])));
+  renderBattles();
+}
+
+function renderBattles(){
+  const f=currentFilter;
+  let list=battles;
+  if(f==='open') list=battles.filter(b=>b.status==='open');
+  else if(f==='live') list=battles.filter(b=>b.status==='live');
+  else if(f==='1v1') list=battles.filter(b=>b.playerCount===2);
+  else if(f==='2v2') list=battles.filter(b=>b.playerCount===4);
+  document.getElementById('battlesGrid').innerHTML=list.map(cardHTML).join('');
+  document.getElementById('activeCnt').textContent=battles.filter(b=>b.status==='live').length;
+}
+
+function pSlotHTML(p,i,b){
+  const win=b.winnerIdx===i;
+  if(!p) return`<div class="player-slot"><div class="p-avatar-empty">+</div><div class="empty-text">AGUARDANDO</div></div>`;
+  const avt=p.avatar
+    ?`<div class="p-avatar"><img src="${p.avatar}" alt=""></div>`
+    :`<div class="p-avatar-init">${(p.name||'?').slice(0,2).toUpperCase()}</div>`;
+  return`<div class="player-slot filled ${win?'winner':''}">${avt}<div class="player-name">${p.name}${win?' 👑':''}</div><div class="player-value">${fmt(b.total/b.playerCount)}</div></div>`;
+}
+
+function cardHTML(b){
+  const sm={open:'s-open',live:'s-live',done:'s-done'};
+  const sl={open:'Aberta',live:'Ao Vivo',done:'Encerrada'};
+  const ph=b.players.map((p,i)=>pSlotHTML(p,i,b));
+  const vs=[];ph.forEach((h,i)=>{vs.push(h);if(i<ph.length-1) vs.push(`<div class="vs-badge">VS</div>`);});
+  const ch=b.cases.map(c=>`<div class="case-chip"><div class="case-icon ${c.color}">${c.emoji}</div>${c.name.split(' ')[0]}</div>`).join('');
+  const btn=b.status==='open'
+    ?`<button class="btn-join" onclick="requireAuth(()=>joinBattle(${b.id},event))">Entrar</button>`
+    :b.status==='live'
+    ?`<button class="btn-watch" onclick="viewBattle(${b.id},event)">Assistir</button>`
+    :`<button class="btn-watch" onclick="viewBattle(${b.id},event)">Resultado</button>`;
+  return`<div class="battle-card ${b.status==='live'?'active-battle':''}" onclick="viewBattle(${b.id},event)">
+    <div class="card-header"><span class="card-id">#${b.id}</span><span class="card-status ${sm[b.status]}">${sl[b.status]}</span></div>
+    <div class="players-row">${vs.join('')}</div>
+    <div class="cases-row">${ch}</div>
+    <div class="card-footer"><div class="total-value"><span class="total-label">Prêmio Total</span><span class="total-num">${fmt(b.total)}</span></div>${btn}</div>
+  </div>`;
+}
+
+function filterBattles(f,el){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderBattles();
+}
+
+// CREATE
+function openCreate(){
+  selCases={};selPlayers_=2;renderCasesGrid();updateChosen();
+  document.querySelectorAll('#playerConfig .player-opt').forEach(e=>e.classList.toggle('selected',parseInt(e.dataset.val)===2));
+  document.getElementById('createModal').classList.add('open');
+}
+
+function selPlayers(n,el){selPlayers_=n;document.querySelectorAll('#playerConfig .player-opt').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');}
+
+function renderCasesGrid(){
+  document.getElementById('casesGrid').innerHTML=CASES.map(c=>`
+    <div class="case-item ${selCases[c.id]>0?'selected':''}" id="ci_${c.id}">
+      <div class="case-visual ${c.color}">${c.emoji}</div>
+      <div class="case-name">${c.name}</div>
+      <div class="case-price">${fmt(c.price)}</div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="chQty('${c.id}',-1,event)">−</button>
+        <span class="qty-val" id="qv_${c.id}">${selCases[c.id]||0}</span>
+        <button class="qty-btn" onclick="chQty('${c.id}',1,event)">+</button>
+      </div>
+    </div>`).join('');
+}
+
+function chQty(id,d,e){
+  e.stopPropagation();
+  const n=Math.max(0,Math.min(10,(selCases[id]||0)+d));
+  if(n===0) delete selCases[id]; else selCases[id]=n;
+  const qv=document.getElementById('qv_'+id);if(qv) qv.textContent=n;
+  const ci=document.getElementById('ci_'+id);if(ci) ci.classList.toggle('selected',n>0);
+  updateChosen();
+}
+
+function updateChosen(){
+  const keys=Object.keys(selCases);
+  const list=document.getElementById('chosenList');const tot=document.getElementById('chosenTotal');
+  if(!keys.length){list.innerHTML='<span style="font-size:12px;color:var(--text-dim)">Nenhuma caixa</span>';tot.textContent='R$ 0,00';return;}
+  let sum=0;
+  list.innerHTML=keys.map(id=>{const c=CASES.find(x=>x.id===id);const q=selCases[id];sum+=c.price*q;return`<div class="chosen-pill">${c.emoji} ${c.name.split(' ')[0]} ×${q}</div>`;}).join('');
+  tot.textContent=fmt(sum);
+}
+
+function confirmCreate(){
+  const keys=Object.keys(selCases);
+  if(!keys.length){showNotif('Selecione ao menos uma caixa.','error');return;}
+  const cArr=[];keys.forEach(id=>{const c=CASES.find(x=>x.id===id);for(let i=0;i<selCases[id];i++) cArr.push(c);});
+  const cost=cArr.reduce((s,c)=>s+c.price,0);
+  if(balance<cost){showNotif('Saldo insuficiente!','error');return;}
+  balance-=cost;updateBalance();
+  const myName=user?user.name:'Você';
+  const myAvt=user?user.avatar:null;
+  const players=[{name:myName,avatar:myAvt}];
+  for(let i=1;i<selPlayers_;i++) players.push(null);
+  battles.unshift({id:++btlCounter,status:'open',playerCount:selPlayers_,players,cases:cArr,total:cost*selPlayers_,winnerIdx:null});
+  closeModal('createModal');renderBattles();
+  showNotif('Batalha criada! Aguardando jogadores… ⚔','success');
+}
+
+// JOIN
+function joinBattle(id,e){
+  if(e) e.stopPropagation();
+  const b=battles.find(x=>x.id===id);if(!b) return;
+  const ei=b.players.findIndex(p=>!p);
+  if(ei<0){showNotif('Batalha cheia!','info');return;}
+  const cost=b.total/b.playerCount;
+  if(balance<cost){showNotif('Saldo insuficiente!','error');return;}
+  balance-=cost;updateBalance();
+  const myName=user?user.name:'Você';
+  b.players[ei]={name:myName,avatar:user?user.avatar:null};
+  if(b.players.every(p=>p)) b.status='live';
+  renderBattles();showNotif('Você entrou na batalha!','success');
+  if(b.status==='live') setTimeout(()=>viewBattle(id,null),400);
+}
+
+// VIEW / SPIN
+function viewBattle(id,e){
+  if(e) e.stopPropagation();
+  const b=battles.find(x=>x.id===id);if(!b) return;
+  document.getElementById('battleModalTitle').textContent='BATALHA #'+b.id;
+  document.getElementById('battleArena').innerHTML=buildArena(b);
+  document.getElementById('battleModal').classList.add('open');
+  if(b.status==='live') setTimeout(()=>doSpin(b),300);
+}
+
+function closeBattle(){spinActive=false;closeModal('battleModal');}
+
+function buildArena(b){
+  const ph=b.players.map((p,i)=>{
+    if(!p) return`<div class="arena-player"><div style="width:52px;height:52px;border-radius:50%;background:var(--bg-card);border:2px dashed var(--border);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">?</div><div class="arena-name" style="color:var(--text-dim)">Aguardando</div></div>`;
+    const win=b.winnerIdx===i;
+    const av=p.avatar
+      ?`<img class="arena-avatar ${win?'highlight':''}" src="${p.avatar}" alt="">`
+      :`<div class="arena-avatar ${win?'highlight':''}" style="display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;">${(p.name||'?').slice(0,2).toUpperCase()}</div>`;
+    return`<div class="arena-player">${av}<div class="arena-name">${p.name}${win?' 👑':''}</div><div class="arena-total" id="at_${b.id}_${i}">${fmt(b.total/b.playerCount)}</div></div>`;
+  });
+  const vs=[];ph.forEach((h,i)=>{vs.push(h);if(i<ph.length-1) vs.push(`<div class="vs-big">VS</div>`);});
+  const reels=b.players.filter(p=>p).map((p,i)=>`
+    <div class="spin-section">
+      <div class="spin-label">${p.name}</div>
+      <div class="reel-container"><div class="reel-pointer"></div><div class="reel-items" id="reel_${b.id}_${i}">${genReel()}</div></div>
+    </div>`).join('');
+  const spinBtn=b.status==='live'?`<div class="spin-btn-wrap"><button class="btn-spin" id="sb_${b.id}" onclick="doSpin_id(${b.id})">▶ ABRIR CAIXAS</button></div>`:'';
+  const wb=b.status==='done'&&b.winnerIdx!=null
+    ?`<div class="win-banner show"><div class="win-title">🏆 ${b.players[b.winnerIdx]?.name||'?'} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div></div>`:'';
+  return`<div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">${vs.join('')}</div>${reels}${spinBtn}<div id="wb_${b.id}" class="win-banner"></div>${wb}`;
+}
+
+function genReel(){
+  return Array.from({length:30},()=>{const s=rndFrom(SKINS);return`<div class="reel-item ${s.cl}"><div class="reel-item-emoji">${s.emoji}</div><div style="font-size:9px;color:var(--text-muted);line-height:1.1">${s.name.split('|')[0]}</div><div class="reel-val">${fmt(s.val)}</div></div>`;}).join('');
+}
+
+function doSpin_id(id){doSpin(battles.find(x=>x.id===id));}
+
+function doSpin(b){
+  const sb=document.getElementById('sb_'+b.id);if(sb) sb.disabled=true;
+  spinActive=true;
+  const filledIdxs=b.players.map((p,i)=>p?i:-1).filter(i=>i>=0);
+  const dur=3000+rnd(0,1500);
+  const winnerPidx=filledIdxs[rnd(0,filledIdxs.length-1)];
+  filledIdxs.forEach((pi,ri)=>{
+    const pos=-(rnd(15,22)*76)-rnd(0,30);
+    const el=document.getElementById('reel_'+b.id+'_'+ri);
+    if(el){el.style.transition=`transform ${dur}ms cubic-bezier(0.12,0.8,0.2,1)`;el.style.transform=`translateX(${pos}px)`;}
+  });
+  setTimeout(()=>{
+    if(!spinActive) return;
+    spinActive=false;b.status='done';b.winnerIdx=winnerPidx;
+    const at=document.getElementById('at_'+b.id+'_'+winnerPidx);
+    if(at) at.textContent=fmt(b.total*rnd(80,150)/100);
+    const wb=document.getElementById('wb_'+b.id);
+    if(wb){const wn=b.players[winnerPidx]?.name||'?';wb.innerHTML=`<div class="win-title">🏆 ${wn} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div>`;wb.classList.add('show');}
+    const myName=user?user.name:'Você';
+    if(b.players[winnerPidx]?.name===myName){
+      balance+=b.total;updateBalance();
+      localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:b.total,date:new Date().toLocaleDateString('pt-BR')});
+      showNotif(`Você ganhou ${fmt(b.total)}! 🏆`,'success');
+    } else if(b.players.some(p=>p&&p.name===myName)){
+      localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'L',bet:b.total/b.playerCount,prize:0,date:new Date().toLocaleDateString('pt-BR')});
+    }
+    renderBattles();
+  },dur+200);
+}
+
+// ─── NOTIF ────────────────────────────────────────────────────────────────────
+function showNotif(msg,type='info'){
+  const el=document.getElementById('notif');
+  el.textContent=msg;el.className='notif '+type+' show';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3200);
+}
+const notifInfo=m=>showNotif(m,'info');
+const notifSuccess=m=>showNotif(m,'success');
+
+// ─── LIVE COUNTERS ────────────────────────────────────────────────────────────
+setInterval(()=>{const el=document.getElementById('onlineCnt');if(el) el.textContent=rnd(820,890);},5000);
+
+// ─── START ────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
