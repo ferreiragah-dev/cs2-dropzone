@@ -12,14 +12,20 @@ const BASE = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/,
 const STEAM_API_KEY = process.env.STEAM_API_KEY || '';
 
 // ── Middlewares ───────────────────────────────────────────────────────────────
+// Necessário para funcionar atrás do proxy reverso do Easypanel/Nginx
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+const isProd = process.env.NODE_ENV === 'production';
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dropzone_dev_secret_mude_isso',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 }
+  cookie: { secure: isProd, sameSite: isProd ? 'none' : 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 }
 }));
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -178,7 +184,26 @@ app.post('/api/tradelink', (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── API: refresh inventário ──────────────────────────────────────────────────
+// ─── API: proxy de imagens Steam (evita CORS) ─────────────────────────────────
+app.get('/imgproxy', async (req, res) => {
+  const url = req.query.url;
+  if (!url || !url.includes('steamstatic.com') && !url.includes('steamcommunity.com')) {
+    return res.status(400).send('URL inválida');
+  }
+  try {
+    const r = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 8000,
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://steamcommunity.com' }
+    });
+    const ct = r.headers['content-type'] || 'image/png';
+    res.set('Content-Type', ct);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(r.data);
+  } catch (e) {
+    res.status(502).send('Erro ao buscar imagem');
+  }
+});
 app.get('/api/inventory/refresh', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ error: 'Não autenticado' });
   const { steamId } = req.session.user;
