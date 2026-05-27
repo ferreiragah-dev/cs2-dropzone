@@ -271,38 +271,50 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
 .sec-name{font-size:14px;font-weight:600;color:var(--text);}
 .sec-desc{font-size:12px;color:var(--text-dim);}
 
-/* BATTLE MODAL */
-.arena-vs{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;}
-.arena-player{flex:1;text-align:center;}
-.arena-avatar{width:52px;height:52px;border-radius:50%;margin:0 auto 8px;border:2px solid var(--border);object-fit:cover;}
-.arena-avatar.highlight{border-color:var(--gold);box-shadow:0 0 16px rgba(255,215,0,.3);}
-.arena-name{font-weight:700;font-size:14px;margin-bottom:2px;}
-.arena-total{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);}
-.vs-big{font-family:'Orbitron',monospace;font-weight:900;font-size:24px;color:var(--border-glow);flex-shrink:0;}
-.spin-section{margin-bottom:1.5rem;}
-.spin-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:.5rem;}
-.reel-container{background:var(--bg-deep);border:1px solid var(--border);border-radius:8px;height:80px;overflow:hidden;position:relative;display:flex;align-items:center;}
-.reel-container::before,.reel-container::after{content:'';position:absolute;top:0;bottom:0;width:60px;z-index:2;}
-.reel-container::before{left:0;background:linear-gradient(90deg,var(--bg-deep),transparent);}
-.reel-container::after{right:0;background:linear-gradient(-90deg,var(--bg-deep),transparent);}
-.reel-pointer{position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--accent);transform:translateX(-50%);z-index:3;box-shadow:0 0 8px var(--accent);}
-.reel-items{display:flex;gap:6px;padding:0 1rem;will-change:transform;}
-.reel-item{flex-shrink:0;width:70px;height:68px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid transparent;font-size:11px;font-weight:600;text-align:center;padding:4px;line-height:1.2;}
-.ri-gray{background:rgba(107,128,153,.1);border-color:rgba(107,128,153,.2);}
-.ri-blue{background:rgba(0,100,220,.12);border-color:rgba(0,100,220,.3);}
-.ri-purple{background:rgba(155,77,255,.12);border-color:rgba(155,77,255,.3);}
-.ri-gold{background:rgba(255,215,0,.1);border-color:rgba(255,215,0,.3);}
-.reel-item-emoji{font-size:20px;margin-bottom:2px;}
-.reel-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);}
-.spin-btn-wrap{text-align:center;margin-top:.75rem;}
-.btn-spin{background:linear-gradient(135deg,var(--accent),#0099CC);border:none;border-radius:6px;padding:.6rem 2.5rem;font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:3px;color:#000;cursor:pointer;transition:all .2s;}
+/* BATTLE MODAL — HellCase style */
+.hc-battle{display:flex;flex-direction:column;height:100%;min-height:500px;background:var(--bg-deep);}
+.hc-topbar{background:var(--bg-panel);border-bottom:1px solid var(--border);padding:.75rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;}
+.hc-case-chip{display:flex;align-items:center;gap:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--text-muted);}
+.hc-case-chip img{width:32px;height:25px;object-fit:contain;}
+.hc-case-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06);}
+.hc-round-info{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);}
+.hc-arena{display:flex;flex:1;min-height:320px;}
+.hc-player-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;border-right:1px solid var(--border);padding:1.5rem 1rem;}
+.hc-player-zone:last-child{border-right:none;}
+.hc-skin-reveal{width:200px;height:200px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:1rem;}
+.hc-skin-reveal::before{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid var(--border);opacity:.4;}
+.hc-skin-reveal::after{content:'';position:absolute;inset:10px;border-radius:50%;border:1px dashed var(--border-glow);opacity:.3;animation:rotateSlow 8s linear infinite;}
+@keyframes rotateSlow{to{transform:rotate(360deg)}}
+.hc-skin-img{width:160px;height:140px;object-fit:contain;position:relative;z-index:1;transition:all .3s;filter:drop-shadow(0 0 20px rgba(0,212,255,.2));}
+.hc-skin-img.reveal-anim{animation:skinReveal .5s ease;}
+@keyframes skinReveal{0%{opacity:0;transform:scale(.6) rotate(-10deg)}60%{transform:scale(1.1) rotate(2deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+.hc-skin-name{font-size:13px;font-weight:700;color:var(--text);text-align:center;margin-bottom:2px;}
+.hc-skin-wear{font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+.hc-skin-val{font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--gold);font-weight:500;}
+.hc-player-info{display:flex;align-items:center;gap:8px;position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);white-space:nowrap;}
+.hc-player-av{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
+.hc-player-av-init{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid var(--border-glow);}
+.hc-player-name{font-size:13px;font-weight:700;}
+.hc-player-total{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);}
+.hc-player-zone.winner-zone{background:rgba(255,215,0,.03);}
+.hc-player-zone.winner-zone .hc-skin-reveal::before{border-color:var(--gold);opacity:.6;}
+.hc-winner-crown{position:absolute;top:.75rem;left:50%;transform:translateX(-50%);font-size:22px;animation:crownBounce .5s ease;}
+@keyframes crownBounce{0%{transform:translateX(-50%) scale(0)}60%{transform:translateX(-50%) scale(1.3)}100%{transform:translateX(-50%) scale(1)}}
+.hc-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);background:var(--bg-panel);display:flex;align-items:center;justify-content:center;gap:1rem;}
+.btn-spin{background:linear-gradient(135deg,var(--accent),#0099CC);border:none;border-radius:8px;padding:.65rem 3rem;font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:3px;color:#000;cursor:pointer;transition:all .2s;}
 .btn-spin:hover{box-shadow:0 0 24px rgba(0,212,255,.5);transform:translateY(-1px);}
 .btn-spin:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.hc-vs-divider{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;font-weight:900;font-size:18px;color:var(--border-glow);z-index:5;pointer-events:none;}
 .win-banner{display:none;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:1rem;text-align:center;margin-top:1rem;}
 .win-banner.show{display:block;animation:winPop .4s ease;}
 @keyframes winPop{0%{opacity:0;transform:scale(.9)}60%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
 .win-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px;color:var(--gold);margin-bottom:4px;}
 .win-sub{font-size:13px;color:var(--text-muted);}
+/* legacy reel (unused but kept) */
+.ri-gray{background:rgba(107,128,153,.1);}
+.ri-blue{background:rgba(0,100,220,.12);}
+.ri-purple{background:rgba(155,77,255,.12);}
+.ri-gold{background:rgba(255,215,0,.1);}
 
 /* CREATE */
 .cases-grid-modal{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:1.5rem;}
@@ -668,13 +680,13 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
 </div>
 
 <!-- BATTLE MODAL -->
-<div class="modal-overlay" id="battleModal">
-  <div class="modal wide">
-    <div class="modal-header">
+<div class="modal-overlay" id="battleModal" style="padding:0;align-items:stretch;">
+  <div class="modal wide" style="max-width:100%;width:100%;max-height:100vh;border-radius:0;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
       <div class="modal-title" id="battleModalTitle">BATALHA</div>
       <div class="modal-close" onclick="closeBattle()">✕</div>
     </div>
-    <div id="battleArena" style="padding:1.5rem;"></div>
+    <div id="battleArena" style="flex:1;overflow:auto;"></div>
   </div>
 </div>
 
@@ -1201,60 +1213,122 @@ function viewBattle(id,e){
 function closeBattle(){spinActive=false;closeModal('battleModal');}
 
 function buildArena(b){
-  const ph=b.players.map((p,i)=>{
-    if(!p) return`<div class="arena-player"><div style="width:52px;height:52px;border-radius:50%;background:var(--bg-card);border:2px dashed var(--border);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">?</div><div class="arena-name" style="color:var(--text-dim)">Aguardando</div></div>`;
-    const win=b.winnerIdx===i;
-    const av=p.avatar
-      ?`<img class="arena-avatar ${win?'highlight':''}" src="${p.avatar}" alt="">`
-      :`<div class="arena-avatar ${win?'highlight':''}" style="display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;">${(p.name||'?').slice(0,2).toUpperCase()}</div>`;
-    return`<div class="arena-player">${av}<div class="arena-name">${p.name}${win?' 👑':''}</div><div class="arena-total" id="at_${b.id}_${i}">${fmt(b.total/b.playerCount)}</div></div>`;
-  });
-  const vs=[];ph.forEach((h,i)=>{vs.push(h);if(i<ph.length-1) vs.push(`<div class="vs-big">VS</div>`);});
-  const reels=b.players.filter(p=>p).map((p,i)=>`
-    <div class="spin-section">
-      <div class="spin-label">${p.name}</div>
-      <div class="reel-container"><div class="reel-pointer"></div><div class="reel-items" id="reel_${b.id}_${i}">${genReel()}</div></div>
+  const caseChips=b.cases.map((c,i)=>`
+    <div class="hc-case-chip ${i===0?'active':''}" id="hcchip_${b.id}_${i}">
+      <img src="${c.img}" style="width:32px;height:25px;object-fit:contain;" onerror="this.style.display='none'">
+      ${c.name.split(' ')[0]}
     </div>`).join('');
-  const spinBtn=b.status==='live'?`<div class="spin-btn-wrap"><button class="btn-spin" id="sb_${b.id}" onclick="doSpin_id(${b.id})">▶ ABRIR CAIXAS</button></div>`:'';
-  const wb=b.status==='done'&&b.winnerIdx!=null
-    ?`<div class="win-banner show"><div class="win-title">🏆 ${b.players[b.winnerIdx]?.name||'?'} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div></div>`:'';
-  return`<div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">${vs.join('')}</div>${reels}${spinBtn}<div id="wb_${b.id}" class="win-banner"></div>${wb}`;
-}
 
-function genReel(){
-  return Array.from({length:30},()=>{const s=rndFrom(SKINS);return`<div class="reel-item ${s.cl}" style="padding:3px;"><img src="${s.img}" style="width:52px;height:40px;object-fit:contain;display:block;margin:0 auto 2px;" onerror="this.style.display='none'"><div style="font-size:8px;color:var(--text-muted);line-height:1.1;text-align:center">${s.name.split('|')[0].trim()}</div><div class="reel-val" style="text-align:center">${fmt(s.val)}</div></div>`;}).join('');
+  const zones=b.players.map((p,i)=>{
+    if(!p) return`<div class="hc-player-zone" id="hczone_${b.id}_${i}">
+      <div class="hc-skin-reveal"><div style="color:var(--text-dim);font-size:13px;">Aguardando...</div></div>
+    </div>`;
+    const win=b.winnerIdx===i;
+    const avHTML=p.avatar
+      ?`<img class="hc-player-av" src="${p.avatar}">`
+      :`<div class="hc-player-av-init">${(p.name||'?').slice(0,2).toUpperCase()}</div>`;
+    const firstSkin=rndFrom(SKINS);
+    return`<div class="hc-player-zone ${win?'winner-zone':''}" id="hczone_${b.id}_${i}">
+      ${win?'<div class="hc-winner-crown">👑</div>':''}
+      <div class="hc-skin-reveal">
+        <img class="hc-skin-img" id="hcskin_${b.id}_${i}" src="${firstSkin.img}" onerror="this.src=''">
+      </div>
+      <div class="hc-skin-name" id="hcskinname_${b.id}_${i}">${b.status==='done'?firstSkin.name:'—'}</div>
+      <div class="hc-skin-wear" id="hcskinwear_${b.id}_${i}"></div>
+      <div class="hc-skin-val" id="hcskinval_${b.id}_${i}">${fmt(b.total/b.playerCount)}</div>
+      <div class="hc-player-info">
+        ${avHTML}
+        <span class="hc-player-name">${p.name}</span>
+        <span class="hc-player-total" id="hctotal_${b.id}_${i}">${fmt(b.total/b.playerCount)}</span>
+      </div>
+    </div>`;
+  });
+
+  let arenaInner=`<div style="display:flex;flex:1;position:relative;min-height:320px;">`;
+  zones.forEach((z,i)=>{arenaInner+=z;if(i<zones.length-1) arenaInner+=`<div class="hc-vs-divider">VS</div>`;});
+  arenaInner+=`</div>`;
+
+  const spinBtn=b.status==='live'
+    ?`<button class="btn-spin" id="sb_${b.id}" onclick="doSpin_id(${b.id})">▶ ABRIR CAIXAS</button>`:'';
+  const winBanner=b.status==='done'&&b.winnerIdx!=null
+    ?`<div class="win-banner show"><div class="win-title">🏆 ${b.players[b.winnerIdx]?.name||'?'} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div></div>`:''
+
+  return`<div class="hc-battle">
+    <div class="hc-topbar">${caseChips}<span class="hc-round-info" id="hcround_${b.id}">RODADA 1 / ${b.cases.length}</span></div>
+    ${arenaInner}
+    <div class="hc-footer" id="hcfooter_${b.id}">${spinBtn}${winBanner}</div>
+  </div>`;
 }
 
 function doSpin_id(id){doSpin(battles.find(x=>x.id===id));}
 
 function doSpin(b){
-  const sb=document.getElementById('sb_'+b.id);if(sb) sb.disabled=true;
+  const btn=document.getElementById('sb_'+b.id);
+  if(btn) btn.disabled=true;
   spinActive=true;
   const filledIdxs=b.players.map((p,i)=>p?i:-1).filter(i=>i>=0);
-  const dur=3000+rnd(0,1500);
-  const winnerPidx=filledIdxs[rnd(0,filledIdxs.length-1)];
-  filledIdxs.forEach((pi,ri)=>{
-    const pos=-(rnd(15,22)*76)-rnd(0,30);
-    const el=document.getElementById('reel_'+b.id+'_'+ri);
-    if(el){el.style.transition=`transform ${dur}ms cubic-bezier(0.12,0.8,0.2,1)`;el.style.transform=`translateX(${pos}px)`;}
-  });
-  setTimeout(()=>{
-    if(!spinActive) return;
-    spinActive=false;b.status='done';b.winnerIdx=winnerPidx;
-    const at=document.getElementById('at_'+b.id+'_'+winnerPidx);
-    if(at) at.textContent=fmt(b.total*rnd(80,150)/100);
-    const wb=document.getElementById('wb_'+b.id);
-    if(wb){const wn=b.players[winnerPidx]?.name||'?';wb.innerHTML=`<div class="win-title">🏆 ${wn} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div>`;wb.classList.add('show');}
-    const myName=user?user.name:'Você';
-    if(b.players[winnerPidx]?.name===myName){
-      balance+=b.total;updateBalance();
-      localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:b.total,date:new Date().toLocaleDateString('pt-BR')});
-      showNotif(`Você ganhou ${fmt(b.total)}! 🏆`,'success');
-    } else if(b.players.some(p=>p&&p.name===myName)){
-      localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'L',bet:b.total/b.playerCount,prize:0,date:new Date().toLocaleDateString('pt-BR')});
+  const totalRounds=b.cases.length;
+  let round=0;
+  const playerTotals={};
+  filledIdxs.forEach(i=>playerTotals[i]=0);
+  const WEARS=['Factory New','Minimal Wear','Field-Tested','Well-Worn','Battle-Scarred'];
+
+  function revealRound(){
+    if(round>=totalRounds){
+      // Winner = highest total
+      let winnerIdx=filledIdxs[0];
+      filledIdxs.forEach(i=>{if(playerTotals[i]>playerTotals[winnerIdx]) winnerIdx=i;});
+      b.status='done';b.winnerIdx=winnerIdx;spinActive=false;
+
+      filledIdxs.forEach(i=>{
+        const z=document.getElementById('hczone_'+b.id+'_'+i);
+        if(!z) return;
+        z.classList.toggle('winner-zone',i===winnerIdx);
+        if(i===winnerIdx&&!z.querySelector('.hc-winner-crown')){
+          const c=document.createElement('div');c.className='hc-winner-crown';c.textContent='👑';z.prepend(c);
+        }
+      });
+
+      const footer=document.getElementById('hcfooter_'+b.id);
+      const wn=b.players[winnerIdx]?.name||'?';
+      if(footer) footer.innerHTML=`<div class="win-banner show"><div class="win-title">🏆 ${wn} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div></div>`;
+
+      const myName=user?user.name:'Você';
+      if(b.players[winnerIdx]?.name===myName){
+        balance+=b.total;updateBalance();
+        localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:b.total,date:new Date().toLocaleDateString('pt-BR')});
+        showNotif(`🏆 Você ganhou ${fmt(b.total)}!`,'success');
+      } else if(b.players.some(p=>p&&p.name===myName)){
+        localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'L',bet:b.total/b.playerCount,prize:0,date:new Date().toLocaleDateString('pt-BR')});
+      }
+      renderBattles();
+      return;
     }
-    renderBattles();
-  },dur+200);
+
+    // Update UI
+    const roundEl=document.getElementById('hcround_'+b.id);
+    if(roundEl) roundEl.textContent=`RODADA ${round+1} / ${totalRounds}`;
+    document.querySelectorAll(`[id^="hcchip_${b.id}_"]`).forEach((el,i)=>el.classList.toggle('active',i===round));
+
+    // Reveal each player with stagger
+    filledIdxs.forEach((pi,ri)=>{
+      setTimeout(()=>{
+        const skin=rndFrom(SKINS);
+        const val=skin.val*(0.4+Math.random()*2.2);
+        playerTotals[pi]+=val;
+
+        const imgEl=document.getElementById('hcskin_'+b.id+'_'+pi);
+        if(imgEl){imgEl.src=skin.img;imgEl.classList.remove('reveal-anim');void imgEl.offsetWidth;imgEl.classList.add('reveal-anim');}
+        const n=document.getElementById('hcskinname_'+b.id+'_'+pi);if(n) n.textContent=skin.name;
+        const w=document.getElementById('hcskinwear_'+b.id+'_'+pi);if(w) w.textContent=rndFrom(WEARS);
+        const v=document.getElementById('hcskinval_'+b.id+'_'+pi);if(v) v.textContent=fmt(val);
+        const t=document.getElementById('hctotal_'+b.id+'_'+pi);if(t) t.textContent=fmt(playerTotals[pi]);
+
+        if(ri===filledIdxs.length-1) setTimeout(()=>{round++;revealRound();},1800);
+      },ri*700);
+    });
+  }
+  setTimeout(()=>revealRound(),300);
 }
 
 // ─── NOTIF ────────────────────────────────────────────────────────────────────
