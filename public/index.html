@@ -693,14 +693,21 @@ const CASES=[
   {id:'spectrum2',name:'Spectrum 2',price:55.00,emoji:'🌈',color:'ci-gold'},
 ];
 const SKINS=[
-  {name:'AK-47 | Asiimov',val:180,emoji:'🔫',cl:'ri-purple'},
-  {name:'AWP | Medusa',val:320,emoji:'🐍',cl:'ri-gold'},
-  {name:'M4A4 | Howl',val:2800,emoji:'🐺',cl:'ri-gold'},
-  {name:'Glock | Fade',val:95,emoji:'💎',cl:'ri-blue'},
-  {name:'AK | Fire Serpent',val:650,emoji:'🐲',cl:'ri-gold'},
-  {name:'Butterfly | Fade',val:1200,emoji:'🦋',cl:'ri-gold'},
-  {name:'Desert Eagle',val:45,emoji:'🔫',cl:'ri-gray'},
-  {name:'P90 | Asiimov',val:38,emoji:'🔫',cl:'ri-blue'},
+  {name:'AK-47 | Asiimov',val:180,cl:'ri-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA/360fx360f'},
+  {name:'AWP | Medusa',val:320,cl:'ri-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g77A9I2k21e1-kRlaj2ldNKcdlI-MwnW_g/360fx360f'},
+  {name:'M4A4 | Howl',val:2800,cl:'ri-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1iqjAoNqs2lDh-ENrNj37dteLMlhs2VQ/360fx360f'},
+  {name:'Glock-18 | Fade',val:95,cl:'ri-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A/360fx360f'},
+  {name:'AK-47 | Fire Serpent',val:650,cl:'ri-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1hL_CoN_2ilDt_UJvYWilINeLMlhJ9XNgpw/360fx360f'},
+  {name:'Karambit | Doppler',val:900,cl:'ri-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1hLzAoNus3Fri_0VuMmrxdYSWdA1rjg7V-tA/360fx360f'},
+  {name:'Desert Eagle | Blaze',val:210,cl:'ri-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5MB1i7mTpd6h0VK2_kI-ZWykd9KRMlhqMXGmEA/360fx360f'},
+  {name:'USP-S | Printstream',val:210,cl:'ri-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fAo9_y3VDi_UY6ZWundYWXdlhiNfEHKg/360fx360f'},
+  {name:'M4A1-S | Printstream',val:180,cl:'ri-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/360fx360f'},
+  {name:'AK-47 | Bloodsport',val:55,cl:'ri-blue',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/360fx360f'},
+  {name:'AWP | Asiimov',val:95,cl:'ri-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7jEp9-k2lLi_UdvZmimcdKRMlhkGYGV2w/360fx360f'},
+  {name:'P90 | Asiimov',val:38,cl:'ri-blue',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7TUo9mi2FDs-UVpYmincdKXMlhniPIFzw/360fx360f'},
+  {name:'Butterfly | Fade',val:1200,cl:'ri-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA/360fx360f'},
+  {name:'Glock-18 | Water Elemental',val:28,cl:'ri-blue',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7fEpN-j3FDi-0VsZW6icZaWYMlhilfAU5A/360fx360f'},
+  {name:'Five-SeveN | Hyper Beast',val:22,cl:'ri-gray',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5MB1i7iAotui3VLi_UY9ZWundYWXMlhijY5LzQ/360fx360f'},
 ];
 const NAMES=['xSniper99','KingOf_CS','br4zilFrag','dark_ace','ProFragger','n1troCS','sKullz_','clutchGod'];
 
@@ -1215,7 +1222,7 @@ function buildArena(b){
 }
 
 function genReel(){
-  return Array.from({length:30},()=>{const s=rndFrom(SKINS);return`<div class="reel-item ${s.cl}"><div class="reel-item-emoji">${s.emoji}</div><div style="font-size:9px;color:var(--text-muted);line-height:1.1">${s.name.split('|')[0]}</div><div class="reel-val">${fmt(s.val)}</div></div>`;}).join('');
+  return Array.from({length:30},()=>{const s=rndFrom(SKINS);return`<div class="reel-item ${s.cl}" style="padding:3px;"><img src="${s.img}" style="width:52px;height:40px;object-fit:contain;display:block;margin:0 auto 2px;" onerror="this.style.display='none'"><div style="font-size:8px;color:var(--text-muted);line-height:1.1;text-align:center">${s.name.split('|')[0].trim()}</div><div class="reel-val" style="text-align:center">${fmt(s.val)}</div></div>`;}).join('');
 }
 
 function doSpin_id(id){doSpin(battles.find(x=>x.id===id));}
