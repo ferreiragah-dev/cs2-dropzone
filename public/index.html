@@ -683,14 +683,14 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
 <script>
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const CASES=[
-  {id:'prisma',name:'Prisma Case',price:8.90,emoji:'🔷',color:'ci-blue'},
-  {id:'revolution',name:'Revolution',price:25.50,emoji:'🌀',color:'ci-purple'},
-  {id:'dreams',name:'Dreams & Nightmares',price:41.20,emoji:'💜',color:'ci-purple'},
-  {id:'fracture',name:'Fracture Case',price:18.70,emoji:'🟠',color:'ci-orange'},
-  {id:'riptide',name:'Riptide Case',price:33.00,emoji:'🌊',color:'ci-blue'},
-  {id:'snakebite',name:'Snakebite Case',price:12.40,emoji:'🐍',color:'ci-gold'},
-  {id:'clutch',name:'Clutch Case',price:7.60,emoji:'🔥',color:'ci-orange'},
-  {id:'spectrum2',name:'Spectrum 2',price:55.00,emoji:'🌈',color:'ci-gold'},
+  {id:'prisma',name:'Prisma Case',price:8.90,color:'ci-blue',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY/360fx360f'},
+  {id:'revolution',name:'Revolution Case',price:25.50,color:'ci-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY/360fx360f'},
+  {id:'dreams',name:'Dreams & Nightmares',price:41.20,color:'ci-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqOhvDpfppV07rOI9rDyiIy72VDi_0ZqZj2ndouReg8_NlKK/360fx360f'},
+  {id:'fracture',name:'Fracture Case',price:18.70,color:'ci-orange',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY/360fx360f'},
+  {id:'riptide',name:'Riptide Case',price:33.00,color:'ci-blue',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY/360fx360f'},
+  {id:'snakebite',name:'Snakebite Case',price:12.40,color:'ci-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqOhvDpfppV07rOI9rDyiIy72VDi_0ZqZj2ndouReg8_NlKK/360fx360f'},
+  {id:'clutch',name:'Clutch Case',price:7.60,color:'ci-orange',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY/360fx360f'},
+  {id:'spectrum2',name:'Spectrum 2 Case',price:55.00,color:'ci-gold',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqOhvDpfppV07rOI9rDyiIy72VDi_0ZqZj2ndouReg8_NlKK/360fx360f'},
 ];
 const SKINS=[
   {name:'AK-47 | Asiimov',val:180,cl:'ri-purple',img:'https://community.akamai.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA/360fx360f'},
@@ -1094,7 +1094,7 @@ function cardHTML(b){
   const sl={open:'Aberta',live:'Ao Vivo',done:'Encerrada'};
   const ph=b.players.map((p,i)=>pSlotHTML(p,i,b));
   const vs=[];ph.forEach((h,i)=>{vs.push(h);if(i<ph.length-1) vs.push(`<div class="vs-badge">VS</div>`);});
-  const ch=b.cases.map(c=>`<div class="case-chip"><div class="case-icon ${c.color}">${c.emoji}</div>${c.name.split(' ')[0]}</div>`).join('');
+  const ch=b.cases.map(c=>`<div class="case-chip"><img src="${c.img}" style="width:20px;height:20px;object-fit:contain;border-radius:3px;">${c.name.split(' ')[0]}</div>`).join('');
   const btn=b.status==='open'
     ?`<button class="btn-join" onclick="requireAuth(()=>joinBattle(${b.id},event))">Entrar</button>`
     :b.status==='live'
@@ -1127,7 +1127,7 @@ function selPlayers(n,el){selPlayers_=n;document.querySelectorAll('#playerConfig
 function renderCasesGrid(){
   document.getElementById('casesGrid').innerHTML=CASES.map(c=>`
     <div class="case-item ${selCases[c.id]>0?'selected':''}" id="ci_${c.id}">
-      <div class="case-visual ${c.color}">${c.emoji}</div>
+      <div class="case-visual" style="background:none;"><img src="${c.img}" style="width:56px;height:44px;object-fit:contain;" onerror="this.src=''"></div>
       <div class="case-name">${c.name}</div>
       <div class="case-price">${fmt(c.price)}</div>
       <div class="qty-control">
