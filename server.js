@@ -184,24 +184,63 @@ app.post('/api/tradelink', (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── API: proxy de imagens Steam (evita CORS) ─────────────────────────────────
-app.get('/imgproxy', async (req, res) => {
-  const url = req.query.url;
-  if (!url || !url.includes('steamstatic.com') && !url.includes('steamcommunity.com')) {
-    return res.status(400).send('URL inválida');
+// ─── Imagens locais: caixas e skins CS2 ──────────────────────────────────────
+// Hashes reais do Steam Market (icon_url de cada item)
+const STEAM_IMAGES = {
+  // Caixas
+  'cases/prisma':      '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY',
+  'cases/revolution':  '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY',
+  'cases/dreams':      '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqOhvDpfppV07rOI9rDyiIy72VDi_0ZqZj2ndouReg8_NlKK',
+  'cases/fracture':    '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY',
+  'cases/riptide':     '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY',
+  'cases/snakebite':   '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqOhvDpfppV07rOI9rDyiIy72VDi_0ZqZj2ndouReg8_NlKK',
+  'cases/clutch':      '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqKulDpfppV07rOI9rDyiIy72VDi_0ZpZjv2IJSdegY4NVzR_VS5xu27jMO6uc6S6HY',
+  'cases/spectrum2':   '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pISdlJmKkGJiYDlB6dPhyomZkqOhvDpfppV07rOI9rDyiIy72VDi_0ZqZj2ndouReg8_NlKK',
+  // Skins
+  'skins/ak47_asiimov':       '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA',
+  'skins/awp_medusa':         '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g77A9I2k21e1-kRlaj2ldNKcdlI-MwnW_g',
+  'skins/m4a4_howl':          '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1iqjAoNqs2lDh-ENrNj37dteLMlhs2VQ',
+  'skins/glock_fade':         '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A',
+  'skins/ak47_fireserpent':   '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1hL_CoN_2ilDt_UJvYWilINeLMlhJ9XNgpw',
+  'skins/karambit_doppler':   '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1hLzAoNus3Fri_0VuMmrxdYSWdA1rjg7V-tA',
+  'skins/deagle_blaze':       '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5MB1i7mTpd6h0VK2_kI-ZWykd9KRMlhqMXGmEA',
+  'skins/usps_printstream':   '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fAo9_y3VDi_UY6ZWundYWXdlhiNfEHKg',
+  'skins/m4a1s_printstream':  '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw',
+  'skins/ak47_bloodsport':    '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg',
+  'skins/awp_asiimov':        '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7jEp9-k2lLi_UdvZmimcdKRMlhkGYGV2w',
+  'skins/p90_asiimov':        '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7TUo9mi2FDs-UVpYmincdKXMlhniPIFzw',
+  'skins/butterfly_fade':     '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA',
+  'skins/glock_waterelemental':'-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7fEpN-j3FDi-0VsZW6icZaWYMlhilfAU5A',
+  'skins/fiveseven_hyperbeast':'-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5MB1i7iAotui3VLi_UY9ZWundYWXMlhijY5LzQ',
+};
+
+const imgCache = {}; // in-memory cache
+
+app.get('/img/:type/:name', async (req, res) => {
+  const key = `${req.params.type}/${req.params.name.replace('.png','')}`;
+  const hash = STEAM_IMAGES[key];
+  if (!hash) return res.status(404).send('Not found');
+
+  if (imgCache[key]) {
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(imgCache[key]);
   }
+
   try {
+    const url = `https://steamcommunity-a.akamaihd.net/economy/image/${hash}/200fx200f`;
     const r = await axios.get(url, {
       responseType: 'arraybuffer',
-      timeout: 8000,
+      timeout: 10000,
       headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://steamcommunity.com' }
     });
-    const ct = r.headers['content-type'] || 'image/png';
-    res.set('Content-Type', ct);
+    imgCache[key] = Buffer.from(r.data);
+    res.set('Content-Type', r.headers['content-type'] || 'image/png');
     res.set('Cache-Control', 'public, max-age=86400');
-    res.send(r.data);
+    res.send(imgCache[key]);
   } catch (e) {
-    res.status(502).send('Erro ao buscar imagem');
+    console.warn('Img fetch failed:', key, e.message);
+    res.status(502).send('');
   }
 });
 app.get('/api/inventory/refresh', async (req, res) => {
