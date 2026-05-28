@@ -1272,7 +1272,7 @@ function cardHTML(b){
   const vs=[];ph.forEach((h,i)=>{vs.push(h);if(i<ph.length-1) vs.push(`<div class="vs-badge">VS</div>`);});
   const ch=b.cases.map(c=>`<div class="case-chip">${c.img?`<img src="${c.img}" style="width:20px;height:20px;object-fit:contain;border-radius:3px;" onerror="this.style.display='none'">`:''}${(c.name||'Case').split(' ')[0]}</div>`).join('');
   const btn=b.status==='open'
-    ?`<button class="btn-join" onclick="requireAuth(()=>joinBattle(${b.id},event))">Entrar</button>`
+    ?`<button class="btn-join" onclick="joinBattle(${b.id},event)">Entrar</button>`
     :b.status==='live'
     ?`<button class="btn-watch" onclick="viewBattle(${b.id},event)">Assistir</button>`
     :`<button class="btn-watch" onclick="viewBattle(${b.id},event)">Resultado</button>`;
@@ -1855,9 +1855,10 @@ async function confirmCreate(){
 // ─── OVERRIDE joinBattle to use API ──────────────────────────────────────────
 async function joinBattle(id,e){
   if(e) e.stopPropagation();
+  if(!user){showNotif('Faça login com a Steam primeiro.','info');return;}
   const b=battles.find(x=>x.id===id);if(!b) return;
 
-  if(user && b.fromServer){
+  if(b.fromServer){
     try{
       const r=await fetch('/api/battles/'+id+'/join',{method:'POST',headers:{'Content-Type':'application/json'}});
       const d=await r.json();

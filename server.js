@@ -109,6 +109,36 @@ async function adjustBalance(steamId, delta) {
   return memBalances[steamId];
 }
 
+function numOrNull(value) {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function knownBalance(req, dbBalance = null) {
+  const candidates = [
+    numOrNull(dbBalance),
+    numOrNull(memBalances[req.session.steamId]),
+    numOrNull(req.session.user?.balance),
+  ].filter(v => v !== null);
+  return candidates.length ? Math.max(...candidates) : 500;
+}
+
+async function spendBalance(req, amount, client = pool, lockedDbBalance = null) {
+  const steamId = req.session.steamId;
+  const balance = knownBalance(req, lockedDbBalance);
+  if (balance < amount) return { ok: false, balance };
+
+  const newBalance = balance - amount;
+  try {
+    await client.query('UPDATE users SET balance=$1 WHERE steam_id=$2', [newBalance, steamId]);
+  } catch (e) {
+    console.warn('DB balance spend failed, using memory:', e.message);
+  }
+  memBalances[steamId] = newBalance;
+  if (req.session.user) req.session.user.balance = newBalance;
+  return { ok: true, balance: newBalance };
+}
+
 async function logTransaction(steamId, type, amount, description) {
   try {
     await pool.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
@@ -352,10 +382,9 @@ app.post('/api/battles', requireAuth, async (req, res) => {
   const totalValue = cases.reduce((s,c) => s+c.price, 0) * playerCount;
   const userCost = cases.reduce((s,c) => s+c.price, 0);
 
-  const balance = await getBalance(req.session.steamId);
-  if (balance < userCost) return res.status(400).json({ error: 'Saldo insuficiente' });
+  const spent = await spendBalance(req, userCost);
+  if (!spent.ok) return res.status(400).json({ error: 'Saldo insuficiente' });
 
-  const newBalance = await adjustBalance(req.session.steamId, -userCost);
   await logTransaction(req.session.steamId, 'battle_loss', -userCost, 'Entrada em batalha');
 
   if (botMode) await ensureHouseBot();
@@ -380,8 +409,7 @@ app.post('/api/battles', requireAuth, async (req, res) => {
     );
   }
 
-  req.session.user.balance = newBalance;
-  res.json({ ok: true, battleId: battle.id, balance: newBalance, status: battle.status, botMode: !!botMode });
+  res.json({ ok: true, battleId: battle.id, balance: spent.balance, status: battle.status, botMode: !!botMode });
 });
 
 // Entrar em batalha
@@ -416,10 +444,9 @@ app.post('/api/battles/:id/join', requireAuth, async (req, res) => {
     const userCost = cases.reduce((s,c) => s+c.price, 0);
 
     const balRes = await client.query('SELECT balance FROM users WHERE steam_id=$1 FOR UPDATE', [steamId]);
-    const balance = parseFloat(balRes.rows[0]?.balance || memBalances[steamId] || 0);
-    if (balance < userCost) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Saldo insuficiente' }); }
+    const spent = await spendBalance(req, userCost, client, balRes.rows[0]?.balance);
+    if (!spent.ok) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Saldo insuficiente' }); }
 
-    await client.query('UPDATE users SET balance=balance-$1 WHERE steam_id=$2', [userCost, steamId]);
     await client.query('INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)', [battleId, steamId, nextSlot]);
     await logTransaction(steamId, 'battle_loss', -userCost, 'Entrada em batalha #'+battleId);
 
@@ -430,9 +457,7 @@ app.post('/api/battles/:id/join', requireAuth, async (req, res) => {
     }
 
     await client.query('COMMIT');
-    memBalances[steamId] = balance - userCost;
-    req.session.user.balance = memBalances[steamId];
-    res.json({ ok: true, slot: nextSlot, balance: memBalances[steamId] });
+    res.json({ ok: true, slot: nextSlot, balance: spent.balance });
   } catch(e) {
     await client.query('ROLLBACK');
     console.error('Join battle error:', e.message);
@@ -569,8 +594,8 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   const price = CASES_PRICES[caseId];
   if (!price) return res.status(400).json({ error: 'Caixa inválida' });
 
-  const balance = await getBalance(req.session.steamId);
-  if (balance < price) return res.status(400).json({ error: 'Saldo insuficiente' });
+  const spent = await spendBalance(req, price);
+  if (!spent.ok) return res.status(400).json({ error: 'Saldo insuficiente' });
 
   // ── Fair weighted probability by rarity ──────────────────────────────────
   // Mil-Spec(gray) 40% | Restricted(blue) 25% | Classified(purple) 15% | Covert(gold) 10%
@@ -598,13 +623,11 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
     ? pool[Math.floor(Math.random() * pool.length)]
     : drops[Math.floor(Math.random() * drops.length)];
 
-  const newBalance = await adjustBalance(req.session.steamId, -price);
   await logTransaction(req.session.steamId, 'case_open', -price, `Caixa: ${caseId}`);
 
   await addInventoryItem(req.session.steamId, item, 'case_open');
 
-  req.session.user.balance = newBalance;
-  res.json({ ok: true, item, balance: newBalance });
+  res.json({ ok: true, item, balance: spent.balance });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
