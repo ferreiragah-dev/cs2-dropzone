@@ -32,6 +32,12 @@ app.use(session({
 const memBalances = {}; // in-memory fallback when DB is unavailable
 const memInventory = {}; // platform inventory fallback when DB writes are unavailable
 
+const HOUSE_BOT = {
+  steamId: 'BOT_HOUSE',
+  name: 'BOT DA CASA',
+  avatar: '',
+};
+
 const RARITY_COLORS = {'ri-gray':'#888888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'};
 
 function normalizeInventoryItem(steamId, item, source = 'battle') {
@@ -66,6 +72,15 @@ async function addInventoryItem(steamId, item, source = 'battle', client = pool)
     memInventory[steamId].unshift(invItem);
     return invItem;
   }
+}
+
+async function ensureHouseBot(client = pool) {
+  await client.query(
+    `INSERT INTO users (steam_id, name, avatar, balance)
+     VALUES ($1,$2,$3,0)
+     ON CONFLICT (steam_id) DO UPDATE SET name=EXCLUDED.name, avatar=EXCLUDED.avatar`,
+    [HOUSE_BOT.steamId, HOUSE_BOT.name, HOUSE_BOT.avatar]
+  );
 }
 
 async function getBalance(steamId) {
@@ -300,8 +315,12 @@ app.get('/api/battles', async (req, res) => {
 
 // Criar batalha
 app.post('/api/battles', requireAuth, async (req, res) => {
-  const { cases, playerCount } = req.body;
-  if (!cases || !cases.length || !playerCount) return res.status(400).json({ error: 'Dados inválidos' });
+  const { cases } = req.body;
+  const botMode = req.body.botMode === true || req.body.botMode === 'true';
+  let playerCount = parseInt(req.body.playerCount, 10);
+  if (botMode) playerCount = 2;
+  if (!cases || !cases.length || !playerCount || playerCount < 2 || playerCount > 4)
+    return res.status(400).json({ error: 'Dados inválidos' });
 
   const totalValue = cases.reduce((s,c) => s+c.price, 0) * playerCount;
   const userCost = cases.reduce((s,c) => s+c.price, 0);
@@ -312,10 +331,12 @@ app.post('/api/battles', requireAuth, async (req, res) => {
   const newBalance = await adjustBalance(req.session.steamId, -userCost);
   await logTransaction(req.session.steamId, 'battle_loss', -userCost, 'Entrada em batalha');
 
+  if (botMode) await ensureHouseBot();
+
   // Create battle
   const battleRes = await pool.query(
     'INSERT INTO battles(player_count,cases_json,total_value,created_by,status) VALUES($1,$2,$3,$4,$5) RETURNING *',
-    [playerCount, JSON.stringify(cases), totalValue, req.session.steamId, 'open']
+    [playerCount, JSON.stringify(cases), totalValue, req.session.steamId, botMode ? 'live' : 'open']
   );
   const battle = battleRes.rows[0];
 
@@ -325,8 +346,15 @@ app.post('/api/battles', requireAuth, async (req, res) => {
     [battle.id, req.session.steamId, 0]
   );
 
+  if (botMode) {
+    await pool.query(
+      'INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)',
+      [battle.id, HOUSE_BOT.steamId, 1]
+    );
+  }
+
   req.session.user.balance = newBalance;
-  res.json({ ok: true, battleId: battle.id, balance: newBalance });
+  res.json({ ok: true, battleId: battle.id, balance: newBalance, status: battle.status, botMode: !!botMode });
 });
 
 // Entrar em batalha
@@ -424,9 +452,11 @@ app.post('/api/battles/:id/finish', requireAuth, async (req, res) => {
     }
 
     // Credit winner
-    await client.query('UPDATE users SET balance=balance+$1 WHERE steam_id=$2', [battle.total_value, winner.steamId]);
-    await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
-      [winner.steamId,'battle_win', battle.total_value, 'Vitória na batalha #'+battleId]);
+    if (winner.steamId !== HOUSE_BOT.steamId) {
+      await client.query('UPDATE users SET balance=balance+$1 WHERE steam_id=$2', [battle.total_value, winner.steamId]);
+      await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
+        [winner.steamId,'battle_win', battle.total_value, 'Vitória na batalha #'+battleId]);
+    }
 
     await client.query('COMMIT');
     res.json({ ok: true, winner: winner.steamId });

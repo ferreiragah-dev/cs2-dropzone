@@ -734,6 +734,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
     <div class="modal-body">
       <div class="section-label">Número de jogadores</div>
       <div class="players-config" id="playerConfig">
+        <div class="player-opt" data-val="bot" onclick="selPlayers('bot',this)"><span class="opt-count">1</span>Solo Bot</div>
         <div class="player-opt selected" data-val="2" onclick="selPlayers(2,this)"><span class="opt-count">2</span>Jogadores</div>
         <div class="player-opt" data-val="3" onclick="selPlayers(3,this)"><span class="opt-count">3</span>Jogadores</div>
         <div class="player-opt" data-val="4" onclick="selPlayers(4,this)"><span class="opt-count">4</span>Jogadores</div>
@@ -822,6 +823,7 @@ let tradeLink='';
 let battles=[];
 let selCases={};
 let selPlayers_=2;
+let selBotMode=false;
 let spinActive=false;
 let currentFilter='all';
 let btlCounter=1000;
@@ -1291,12 +1293,17 @@ function filterBattles(f,el){
 
 // CREATE
 function openCreate(){
-  selCases={};selPlayers_=2;renderCasesGrid();updateChosen();
-  document.querySelectorAll('#playerConfig .player-opt').forEach(e=>e.classList.toggle('selected',parseInt(e.dataset.val)===2));
+  selCases={};selPlayers_=2;selBotMode=false;renderCasesGrid();updateChosen();
+  document.querySelectorAll('#playerConfig .player-opt').forEach(e=>e.classList.toggle('selected',e.dataset.val==='2'));
   document.getElementById('createModal').classList.add('open');
 }
 
-function selPlayers(n,el){selPlayers_=n;document.querySelectorAll('#playerConfig .player-opt').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');}
+function selPlayers(n,el){
+  selBotMode=n==='bot';
+  selPlayers_=selBotMode?2:n;
+  document.querySelectorAll('#playerConfig .player-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+}
 
 function renderCasesGrid(){
   document.getElementById('casesGrid').innerHTML=CASES.map(c=>`
@@ -1486,7 +1493,8 @@ function doSpin(b){
       // Footer: show result
       const footer=document.getElementById('hcfooter_'+b.id);
       const wn=b.players[winnerIdx]?.name||'?';
-      const iWon=b.players[winnerIdx]?.name===myName;
+      const winnerPlayer=b.players[winnerIdx];
+      const iWon=user&&winnerPlayer?.steamId ? winnerPlayer.steamId===user.steamId : winnerPlayer?.name===myName;
       if(footer) footer.innerHTML=`
         <div style="text-align:center;">
           <div style="font-family:'Orbitron',monospace;font-size:${iWon?'20px':'16px'};font-weight:900;letter-spacing:3px;color:${iWon?'var(--gold)':'var(--red)'};text-shadow:0 0 20px ${iWon?'rgba(255,215,0,.5)':'rgba(255,59,59,.4)'};margin-bottom:.25rem;">
@@ -1513,7 +1521,7 @@ function doSpin(b){
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:totalPrize,date:new Date().toLocaleDateString('pt-BR')});
         showNotif(`🏆 Você ganhou ${fmt(totalPrize)}!`,'success');
         setTimeout(()=>loadMyItems(),1500);
-      } else if(b.players.some(p=>p&&p.name===myName)){
+      } else if(b.players.some(p=>p&&(user&&p.steamId?p.steamId===user.steamId:p.name===myName))){
         if(b.fromServer&&user){
           fetch('/api/battles/'+b.id+'/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:playerResults})})
           .then(()=>fetch('/api/me')).then(r=>r.json()).then(d=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}}).catch(()=>{});
@@ -1814,23 +1822,33 @@ async function confirmCreate(){
   if(user){
     try{
       const r=await fetch('/api/battles',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({cases:cArr,playerCount:selPlayers_})});
+        body:JSON.stringify({cases:cArr,playerCount:selPlayers_,botMode:selBotMode})});
       const d=await r.json();
       if(!d.ok){showNotif(d.error||'Erro ao criar batalha','error');return;}
       balance=d.balance;updateBalance();
       closeModal('createModal');
       await pollBattles();
-      showNotif('Batalha criada! Aguardando jogadores… ⚔','success');
+      if(d.status==='live'){
+        showNotif('Batalha solo criada contra o BOT DA CASA!','success');
+        setTimeout(()=>viewBattle(d.battleId,null),300);
+      } else {
+        showNotif('Batalha criada! Aguardando jogadores… ⚔','success');
+      }
     }catch(e){showNotif('Erro ao criar batalha','error');}
   } else {
     // local fallback
     balance-=cost;updateBalance();
     const myName='Você';
     const players=[{name:myName,avatar:null}];
-    for(let i=1;i<selPlayers_;i++) players.push(null);
-    battles.unshift({id:++btlCounter,status:'open',playerCount:selPlayers_,players,cases:cArr,total:cost*selPlayers_,winnerIdx:null});
+    if(selBotMode) {
+      players.push({name:'BOT DA CASA',avatar:null,steamId:'BOT_HOUSE'});
+    } else {
+      for(let i=1;i<selPlayers_;i++) players.push(null);
+    }
+    battles.unshift({id:++btlCounter,status:selBotMode?'live':'open',playerCount:selPlayers_,players,cases:cArr,total:cost*selPlayers_,winnerIdx:null});
     closeModal('createModal');renderBattles();
-    showNotif('Batalha criada! ⚔','success');
+    showNotif(selBotMode?'Batalha solo criada contra o BOT DA CASA!':'Batalha criada! ⚔','success');
+    if(selBotMode) setTimeout(()=>viewBattle(btlCounter,null),300);
   }
 }
 
