@@ -307,7 +307,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
 .hc-vs-divider{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;font-weight:900;font-size:18px;color:var(--border-glow);z-index:5;pointer-events:none;}
 .win-banner{display:none;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:1rem;text-align:center;margin-top:1rem;}
 .win-banner.show{display:block;animation:winPop .4s ease;}
-@keyframes winPop{0%{opacity:0;transform:scale(.9)}60%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
+@keyframes winPop{0%{transform:scale(1)}40%{transform:scale(1.15)}70%{transform:scale(.95)}100%{transform:scale(1.05)}}
+@keyframes skinReveal{0%{opacity:0;transform:scale(.5) rotate(-15deg)}60%{transform:scale(1.1) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
 .win-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px;color:var(--gold);margin-bottom:4px;}
 .win-sub{font-size:13px;color:var(--text-muted);}
 /* legacy reel (unused but kept) */
@@ -1323,8 +1324,12 @@ function doSpin(b){
         const val=skin.val*(0.4+Math.random()*2.2);
         playerTotals[pi]+=val;
 
-        const imgEl=document.getElementById('hcskin_'+b.id+'_'+pi);
-        if(imgEl){imgEl.src=skin.img;imgEl.classList.remove('reveal-anim');void imgEl.offsetWidth;imgEl.classList.add('reveal-anim');}
+      const imgEl=document.getElementById('hcskin_'+b.id+'_'+pi);
+        if(imgEl){
+          imgEl.onerror=function(){this.src=SKINS.find(s=>s.cl===skin.cl)?.img||SKINS[0].img;this.onerror=null;};
+          imgEl.src=skin.img;
+          imgEl.classList.remove('reveal-anim');void imgEl.offsetWidth;imgEl.classList.add('reveal-anim');
+        }
         const n=document.getElementById('hcskinname_'+b.id+'_'+pi);if(n) n.textContent=skin.name;
         const w=document.getElementById('hcskinwear_'+b.id+'_'+pi);if(w) w.textContent=rndFrom(WEARS);
         const v=document.getElementById('hcskinval_'+b.id+'_'+pi);if(v) v.textContent=fmt(val);
@@ -1373,70 +1378,129 @@ async function openCase(caseId){
 
   const c=CASES.find(x=>x.id===caseId);
   if(!c){caseOpenActive=false;return;}
-
   if(balance<c.price){showNotif('Saldo insuficiente!','error');caseOpenActive=false;return;}
 
-  // Show reel animation
-  const body=document.getElementById('caseOpenBody');
   const title=document.getElementById('caseOpenTitle');
+  const body=document.getElementById('caseOpenBody');
   title.textContent='ABRINDO — '+c.name.toUpperCase();
   document.getElementById('caseOpenModal').classList.add('open');
 
-  // Build reel
-  const reelItems=Array.from({length:40},()=>{
-    const s=rndFrom(SKINS);
-    return`<div style="flex-shrink:0;width:100px;height:90px;border-radius:8px;background:var(--bg-hover);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;">
-      <img src="${s.img}" style="width:64px;height:50px;object-fit:contain;" onerror="this.style.display='none'">
-      <div style="font-size:9px;color:var(--text-muted);text-align:center;line-height:1.1;">${s.name.split('|')[0]||s.name}</div>
+  // ── Fair probability weights by rarity ──────────────────────────
+  // Mil-Spec 40% | Restricted 25% | Classified 15% | Covert 10% | Rare 7% | Knife 3%
+  const RARITY_WEIGHTS = {'ri-gray':40,'ri-blue':25,'ri-purple':15,'ri-gold':10};
+  function weightedRoll(){
+    const roll=Math.random()*100;
+    const order=['ri-gray','ri-blue','ri-purple','ri-gold'];
+    let acc=0;
+    for(const r of order){
+      acc+=RARITY_WEIGHTS[r]||10;
+      if(roll<acc) return r;
+    }
+    return 'ri-gold';
+  }
+
+  // Build reel with weighted items (more commons in reel, rare at end)
+  function makeReelItem(skin,highlight=false){
+    const rc={'ri-gray':'#888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'}[skin.cl]||'#888';
+    const border=highlight?`border:2px solid ${rc};box-shadow:0 0 10px ${rc}44;`:`border:1px solid ${rc}44;`;
+    return`<div class="reel-cell" style="flex-shrink:0;width:106px;height:96px;border-radius:8px;background:var(--bg-hover);${border}display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;gap:4px;">
+      <img src="${skin.img}" style="width:68px;height:52px;object-fit:contain;" onerror="this.src='/img/skins/ak47_asiimov.png'">
+      <div style="font-size:9px;color:${rc};text-align:center;line-height:1.1;font-weight:600;">${skin.name.split('|')[1]?.trim()||skin.name.split('|')[0]}</div>
     </div>`;
-  }).join('');
+  }
+
+  // Pre-call API to get the winning item first, then build reel ending on it
+  let winItem = null;
+  try{
+    const r=await fetch('/api/cases/'+caseId+'/open',{method:'POST',headers:{'Content-Type':'application/json'}});
+    const d=await r.json();
+    if(!d.ok){showNotif(d.error||'Erro','error');closeCaseOpen();caseOpenActive=false;return;}
+    winItem=d.item;
+    balance=d.balance;updateBalance();
+    const bd=document.getElementById('casesBalanceDisplay');if(bd) bd.textContent=fmt(balance);
+  }catch(e){showNotif('Erro ao abrir caixa','error');closeCaseOpen();caseOpenActive=false;return;}
+
+  // Build reel: 35 random items + winning item near center at position 30
+  const reelCount=38;
+  const winPos=32; // item index where winner lands
+  const reelSkins=[];
+  for(let i=0;i<reelCount;i++){
+    if(i===winPos){
+      // Insert the actual winning skin
+      const winSkin=SKINS.find(s=>s.name===winItem.name)||rndFrom(SKINS.filter(s=>s.cl===winItem.cl)||SKINS);
+      reelSkins.push({...winSkin,isWinner:true});
+    } else {
+      // Weighted random for fillers
+      const rarity=weightedRoll();
+      const pool=SKINS.filter(s=>s.cl===rarity);
+      reelSkins.push(rndFrom(pool.length?pool:SKINS));
+    }
+  }
+
+  const reelHTML=reelSkins.map((s,i)=>makeReelItem(s,i===winPos)).join('');
 
   body.innerHTML=`
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">Rolando...</div>
-    <div style="width:100%;overflow:hidden;position:relative;border:1px solid var(--border);border-radius:8px;background:var(--bg-deep);height:110px;display:flex;align-items:center;">
-      <div style="position:absolute;left:0;right:0;top:0;bottom:0;background:linear-gradient(90deg,var(--bg-deep) 0%,transparent 20%,transparent 80%,var(--bg-deep) 100%);z-index:2;"></div>
-      <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--accent);box-shadow:0 0 8px var(--accent);z-index:3;transform:translateX(-50%);"></div>
-      <div id="caseReel" style="display:flex;gap:6px;padding:0 1rem;will-change:transform;">${reelItems}</div>
-    </div>`;
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:.75rem;letter-spacing:2px;text-transform:uppercase;">⟳ Rolando...</div>
+    <div style="width:100%;overflow:hidden;position:relative;border:1px solid var(--border);border-radius:10px;background:var(--bg-deep);height:116px;display:flex;align-items:center;">
+      <div style="position:absolute;left:0;right:0;top:0;bottom:0;background:linear-gradient(90deg,var(--bg-deep) 0%,transparent 25%,transparent 75%,var(--bg-deep) 100%);z-index:2;pointer-events:none;"></div>
+      <div style="position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--accent);box-shadow:0 0 12px var(--accent),0 0 24px rgba(0,212,255,.3);z-index:3;transform:translateX(-50%);"></div>
+      <div style="position:absolute;left:50%;top:-1px;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid var(--accent);z-index:4;"></div>
+      <div id="caseReel" style="display:flex;gap:6px;padding:0 20px;will-change:transform;transform:translateX(0px);">${reelHTML}</div>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:.5rem;">Boa sorte!</div>`;
 
-  // Animate reel
+  // ── Animate reel ────────────────────────────────────────────────
+  // Item width = 106px + 6px gap = 112px
+  const ITEM_W=112;
+  // We want winPos item to land exactly under the center pointer
+  // Center of reel container = width/2 ≈ 300px from left edge
+  // After transform, position of item[winPos] = padding(20) + winPos*ITEM_W + itemW/2
+  // We want: startOffset + transform + winPos*ITEM_W + 53 = containerWidth/2
+  // So transform = containerWidth/2 - 20 - winPos*ITEM_W - 53 + small_randomness
+  const containerW = body.querySelector('div:nth-child(2)')?.offsetWidth || 620;
+  const centerOffset = Math.floor(containerW/2);
+  const targetX = centerOffset - 20 - (winPos * ITEM_W) - 53 + rnd(-15,15);
+
   const reel=document.getElementById('caseReel');
-  const itemW=106;
-  const target=-(rnd(20,30)*itemW)+rnd(-30,30);
-  reel.style.transition=`transform 3.5s cubic-bezier(0.12,0.8,0.2,1)`;
-  reel.style.transform=`translateX(${target}px)`;
+  if(!reel){caseOpenActive=false;return;}
 
-  // After animation, call API
-  setTimeout(async()=>{
-    try{
-      const r=await fetch('/api/cases/'+caseId+'/open',{method:'POST',headers:{'Content-Type':'application/json'}});
-      const d=await r.json();
-      if(!d.ok){showNotif(d.error||'Erro','error');closeCaseOpen();caseOpenActive=false;return;}
-      balance=d.balance;updateBalance();
-      const bd=document.getElementById('casesBalanceDisplay');if(bd) bd.textContent=fmt(balance);
+  // Need 2 rAF to ensure DOM painted before starting transition
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      reel.style.transition='transform 4s cubic-bezier(0.08,0.82,0.17,1)';
+      reel.style.transform=`translateX(${targetX}px)`;
+    });
+  });
 
-      const item=d.item;
-      const rarityColors={gray:'#888',blue:'#4d79ff','ri-gray':'#888','ri-blue':'#4d79ff','ri-purple':'#9B4DFF','ri-gold':'#FFD700'};
-      const rc=rarityColors[item.cl]||'#9B4DFF';
+  // Show result after animation
+  setTimeout(()=>{
+    const rc={'ri-gray':'#888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'}[winItem.cl]||'#9B4DFF';
+    const imgSrc=winItem.img||SKINS.find(s=>s.name===winItem.name)?.img||'/img/skins/ak47_asiimov.png';
 
+    // Flash the winner cell
+    const cells=document.querySelectorAll('.reel-cell');
+    if(cells[winPos]) cells[winPos].style.animation='winPop 0.5s ease';
+
+    setTimeout(()=>{
       body.innerHTML=`
-        <div style="text-align:center;">
-          <div style="font-size:13px;color:var(--green);letter-spacing:2px;font-weight:700;margin-bottom:1rem;">✓ ITEM OBTIDO</div>
-          <div style="width:180px;height:160px;margin:0 auto 1rem;position:relative;display:flex;align-items:center;justify-content:center;">
-            <div style="position:absolute;inset:0;border-radius:50%;border:2px solid ${rc};opacity:.4;animation:rotateSlow 4s linear infinite;"></div>
-            <img src="${item.img||'/img/skins/ak47_asiimov.png'}" style="width:150px;height:120px;object-fit:contain;animation:skinReveal .5s ease;" onerror="this.style.display='none'">
+        <div style="text-align:center;animation:modalIn .3s ease;">
+          <div style="font-size:12px;color:var(--green);letter-spacing:2px;font-weight:700;margin-bottom:.75rem;">✦ ITEM OBTIDO ✦</div>
+          <div style="position:relative;width:200px;height:170px;margin:0 auto .75rem;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:2px solid ${rc};opacity:.5;animation:rotateSlow 3s linear infinite;"></div>
+            <div style="position:absolute;inset:15px;border-radius:50%;border:1px dashed ${rc};opacity:.25;animation:rotateSlow 6s linear infinite reverse;"></div>
+            <img src="${imgSrc}" style="width:160px;height:130px;object-fit:contain;position:relative;z-index:1;animation:skinReveal .5s ease;filter:drop-shadow(0 0 16px ${rc}66);" onerror="this.src='/img/skins/ak47_asiimov.png'">
           </div>
-          <div style="font-size:17px;font-weight:700;color:${rc};margin-bottom:4px;">${item.name}</div>
-          <div style="font-size:12px;color:var(--text-dim);margin-bottom:.5rem;">${item.wear||''}</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--gold);margin-bottom:1.5rem;">${fmt(item.val)}</div>
-          <div style="display:flex;gap:.75rem;justify-content:center;">
-            <button class="btn-primary" onclick="openCase('${caseId}')">Abrir Novamente</button>
+          <div style="font-size:16px;font-weight:700;color:${rc};margin-bottom:2px;">${winItem.name}</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:.4rem;">${winItem.wear||''}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--gold);margin-bottom:1.25rem;font-weight:500;">${fmt(winItem.val)}</div>
+          <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="openCase('${caseId}')">↺ Abrir Novamente (${fmt(c.price)})</button>
             <button class="btn-ghost" onclick="closeCaseOpen()">Fechar</button>
           </div>
         </div>`;
       caseOpenActive=false;
-    }catch(e){showNotif('Erro ao abrir caixa','error');closeCaseOpen();caseOpenActive=false;}
-  },3700);
+    },400);
+  },4200);
 }
 
 function closeCaseOpen(){

@@ -472,13 +472,31 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   const balance = await getBalance(req.session.steamId);
   if (balance < price) return res.status(400).json({ error: 'Saldo insuficiente' });
 
-  // Roll item (weighted by rarity)
+  // ── Fair weighted probability by rarity ──────────────────────────────────
+  // Mil-Spec(gray) 40% | Restricted(blue) 25% | Classified(purple) 15% | Covert(gold) 10%
+  // With "StatTrak" bonus chance 5% and knife 5%
   const drops = CASE_DROPS[caseId] || CASE_DROPS['prisma'];
-  const weights = [40, 25, 15, 10, 7, 3];
+  
+  // Group by rarity
+  const byRarity = {
+    'ri-gray':   drops.filter(d=>d.cl==='ri-gray'),
+    'ri-blue':   drops.filter(d=>d.cl==='ri-blue'),
+    'ri-purple': drops.filter(d=>d.cl==='ri-purple'),
+    'ri-gold':   drops.filter(d=>d.cl==='ri-gold'),
+  };
+  
+  // Weighted roll
   const roll = Math.random() * 100;
-  let acc = 0, itemIdx = 0;
-  for (let i = 0; i < weights.length; i++) { acc += weights[i]; if (roll < acc) { itemIdx = i; break; } }
-  const item = drops[Math.min(itemIdx, drops.length - 1)];
+  let rarity;
+  if      (roll < 40) rarity = 'ri-gray';
+  else if (roll < 65) rarity = 'ri-blue';
+  else if (roll < 80) rarity = 'ri-purple';
+  else                rarity = 'ri-gold';
+  
+  const pool = byRarity[rarity];
+  const item = pool && pool.length > 0 
+    ? pool[Math.floor(Math.random() * pool.length)]
+    : drops[Math.floor(Math.random() * drops.length)];
 
   const newBalance = await adjustBalance(req.session.steamId, -price);
   await logTransaction(req.session.steamId, 'case_open', -price, `Caixa: ${caseId}`);
