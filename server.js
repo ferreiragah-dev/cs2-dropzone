@@ -37,6 +37,8 @@ const HOUSE_BOT = {
   name: 'BOT DA CASA',
   avatar: '',
 };
+const onlineUsers = new Map();
+const ONLINE_TTL_MS = 5 * 60 * 1000;
 
 const RARITY_COLORS = {'ri-gray':'#888888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'};
 
@@ -118,6 +120,23 @@ const requireAuth = (req, res, next) => {
   if (!req.session.steamId) return res.status(401).json({ error: 'Não autenticado' });
   next();
 };
+
+function touchOnline(steamId) {
+  if (steamId && steamId !== HOUSE_BOT.steamId) onlineUsers.set(steamId, Date.now());
+}
+
+function getOnlineCount() {
+  const cutoff = Date.now() - ONLINE_TTL_MS;
+  for (const [steamId, lastSeen] of onlineUsers) {
+    if (lastSeen < cutoff) onlineUsers.delete(steamId);
+  }
+  return onlineUsers.size;
+}
+
+app.use((req, res, next) => {
+  touchOnline(req.session?.steamId);
+  next();
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STEAM OPENID
@@ -214,6 +233,7 @@ app.get('/auth/steam/return', async (req, res) => {
       steamInventory: inventory, balance: parseFloat(dbUser.balance),
       tradeLink: dbUser.trade_link||'',
     };
+    touchOnline(steamId);
 
     console.log(`✓ Login: ${player.personaname} (${steamId})`);
     res.redirect('/?welcome=1');
@@ -228,6 +248,7 @@ app.get('/auth/steam/return', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 app.get('/api/me', async (req, res) => {
   if (!req.session.steamId) return res.json({ loggedIn: false });
+  touchOnline(req.session.steamId);
   const balance = await getBalance(req.session.steamId);
   req.session.user.balance = balance;
   memBalances[req.session.steamId] = balance;
@@ -239,7 +260,13 @@ app.get('/api/me', async (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
+  if (req.session.steamId) onlineUsers.delete(req.session.steamId);
   req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.get('/api/online', (req, res) => {
+  touchOnline(req.session?.steamId);
+  res.json({ online: getOnlineCount() });
 });
 
 app.post('/api/tradelink', requireAuth, async (req, res) => {

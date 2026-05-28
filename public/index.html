@@ -457,7 +457,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
 
 <!-- STATS -->
 <div class="stats-bar" id="statsBar">
-  <div class="stat-item"><div class="stat-dot dot-green"></div><span class="stat-label">Online</span><span class="stat-val" id="onlineCnt">847</span></div>
+  <div class="stat-item"><div class="stat-dot dot-green"></div><span class="stat-label">Online</span><span class="stat-val" id="onlineCnt">0</span></div>
   <div class="stat-item"><div class="stat-dot dot-blue"></div><span class="stat-label">Batalhas Ativas</span><span class="stat-val" id="activeCnt">12</span></div>
   <div class="stat-item"><div class="stat-dot dot-gold"></div><span class="stat-label">Ganho Total Hoje</span><span class="stat-val">R$ 184.320</span></div>
 </div>
@@ -1892,7 +1892,19 @@ const notifInfo=m=>showNotif(m,'info');
 const notifSuccess=m=>showNotif(m,'success');
 
 // ─── LIVE COUNTERS ────────────────────────────────────────────────────────────
-setInterval(()=>{const el=document.getElementById('onlineCnt');if(el) el.textContent=rnd(820,890);},5000);
+async function updateOnlineCount(){
+  const el=document.getElementById('onlineCnt');
+  if(!el) return;
+  try{
+    const r=await fetch('/api/online');
+    const d=await r.json();
+    el.textContent=String(d.online||0);
+  }catch(e){
+    el.textContent='0';
+  }
+}
+setInterval(updateOnlineCount,30000);
+updateOnlineCount();
 
 // ─── START ────────────────────────────────────────────────────────────────────
 init();
