@@ -769,7 +769,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
 
 <script>
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
-const CASES=[
+let CASES=[
   {id:'prisma',name:'Prisma Case',price:8.90,color:'ci-blue',img:'/img/cases/prisma.png'},
   {id:'revolution',name:'Revolution Case',price:25.50,color:'ci-purple',img:'/img/cases/revolution.png'},
   {id:'dreams',name:'Dreams & Nightmares',price:41.20,color:'ci-purple',img:'/img/cases/dreams.png'},
@@ -798,21 +798,14 @@ function imgWithFallback(skin, style=''){
 }
 
 const SKINS=[
-  {name:'AK-47 | Asiimov',val:180,cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
-  {name:'AWP | Asiimov',val:95,cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
-  {name:'M4A1-S | Printstream',val:180,cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
-  {name:'USP-S | Printstream',val:210,cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
-  {name:'AK-47 | Bloodsport',val:55,cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
-  {name:'P90 | Asiimov',val:38,cl:'ri-blue',img:'/img/skins/p90_asiimov.png'},
-  {name:'Butterfly Knife | Fade',val:1200,cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
-  {name:'Glock-18 | Fade',val:95,cl:'ri-purple',img:'/img/skins/glock_fade.png'},
-  {name:'AK-47 | Fire Serpent',val:650,cl:'ri-gold',img:'/img/skins/ak47_fireserpent.png'},
-  {name:'Karambit | Doppler',val:900,cl:'ri-gold',img:'/img/skins/karambit_doppler.png'},
-  {name:'Desert Eagle | Blaze',val:210,cl:'ri-gold',img:'/img/skins/deagle_blaze.png'},
-  {name:'M4A4 | Howl',val:2800,cl:'ri-gold',img:'/img/skins/m4a4_howl.png'},
-  {name:'AWP | Medusa',val:320,cl:'ri-gold',img:'/img/skins/awp_medusa.png'},
-  {name:'Five-SeveN | Hyper Beast',val:22,cl:'ri-gray',img:'/img/skins/fiveseven_hyperbeast.png'},
-  {name:'Glock-18 | Water Elemental',val:28,cl:'ri-blue',img:'/img/skins/glock_waterelemental.png'},
+  {name:'AK-47 | Slate',val:16,cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+  {name:'AWP | Atheris',val:18,cl:'ri-blue',img:'/img/skins/awp_asiimov.png'},
+  {name:'M4A4 | Neo-Noir',val:95,cl:'ri-gold',img:'/img/skins/m4a1s_printstream.png'},
+  {name:'USP-S | Cortex',val:35,cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
+  {name:'Glock-18 | Moonrise',val:4,cl:'ri-gray',img:'/img/skins/glock_fade.png'},
+  {name:'Desert Eagle | Printstream',val:230,cl:'ri-gold',img:'/img/skins/deagle_blaze.png'},
+  {name:'M4A4 | Temukau',val:150,cl:'ri-gold',img:'/img/skins/m4a1s_printstream.png'},
+  {name:'AK-47 | The Empress',val:165,cl:'ri-gold',img:'/img/skins/ak47_asiimov.png'},
 ];
 const NAMES=['xSniper99','KingOf_CS','br4zilFrag','dark_ace','ProFragger','n1troCS','sKullz_','clutchGod'];
 
@@ -846,9 +839,21 @@ async function fetchJSON(url, options={}, timeoutMs=8000){
   }
 }
 
+async function loadCatalog(){
+  try{
+    const {ok,data:d}=await fetchJSON('/api/catalog',{},8000);
+    if(!ok||!d.cases) return;
+    CASES=CASES.map(c=>{
+      const real=d.cases.find(x=>x.id===c.id);
+      return real?{...c,name:real.name||c.name,price:parseFloat(real.price||c.price),img:real.img||c.img}:c;
+    });
+  }catch(e){console.warn('catalog unavailable:',e.message);}
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init(){
   try{
+    await loadCatalog();
     const {data:d}=await fetchJSON('/api/me',{},5000);
     if(d.loggedIn){
       user=d.user;

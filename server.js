@@ -408,8 +408,10 @@ app.post('/api/battles', requireAuth, async (req, res) => {
   if (!cases || !cases.length || !playerCount || playerCount < 2 || playerCount > 4)
     return res.status(400).json({ error: 'Dados inválidos' });
 
-  const totalValue = cases.reduce((s,c) => s+c.price, 0) * playerCount;
-  const userCost = cases.reduce((s,c) => s+c.price, 0);
+  const battleCases = (await Promise.all(cases.map(c => getCaseCatalogItem(c.id)))).filter(Boolean);
+  if (battleCases.length !== cases.length) return res.status(400).json({ error: 'Caixa inválida' });
+  const totalValue = battleCases.reduce((s,c) => s+c.price, 0) * playerCount;
+  const userCost = battleCases.reduce((s,c) => s+c.price, 0);
 
   const client = await pool.connect();
   try {
@@ -426,7 +428,7 @@ app.post('/api/battles', requireAuth, async (req, res) => {
 
     const battleRes = await client.query(
       'INSERT INTO battles(player_count,cases_json,total_value,created_by,status) VALUES($1,$2,$3,$4,$5) RETURNING *',
-      [playerCount, JSON.stringify(cases), totalValue, req.session.steamId, botMode ? 'live' : 'open']
+      [playerCount, JSON.stringify(battleCases), totalValue, req.session.steamId, botMode ? 'live' : 'open']
     );
     const battle = battleRes.rows[0];
 
@@ -618,74 +620,152 @@ app.post('/api/battles/:id/finish', requireAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // API — ABRIR CAIXA (solo)
 // ═══════════════════════════════════════════════════════════════════════════════
+const marketCache = new Map();
+const MARKET_CACHE_MS = 10 * 60 * 1000;
+const CASE_CATALOG = [
+  {id:'prisma',name:'Prisma Case',fallback:8.90},
+  {id:'revolution',name:'Revolution Case',fallback:25.50},
+  {id:'dreams',name:'Dreams & Nightmares Case',fallback:41.20},
+  {id:'fracture',name:'Fracture Case',fallback:18.70},
+  {id:'riptide',name:'Operation Riptide Case',fallback:33.00},
+  {id:'snakebite',name:'Snakebite Case',fallback:12.40},
+  {id:'clutch',name:'Clutch Case',fallback:7.60},
+  {id:'spectrum2',name:'Spectrum 2 Case',fallback:55.00},
+];
+
+function parseSteamBRL(priceText) {
+  if (!priceText) return null;
+  const cleaned = String(priceText).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+  const value = parseFloat(cleaned);
+  return Number.isFinite(value) ? value : null;
+}
+
+function marketHash(item) {
+  return item.marketHashName || `${item.name} (${item.wear || 'Factory New'})`;
+}
+
+async function getSteamMarketData(hashName) {
+  const cached = marketCache.get(hashName);
+  if (cached && Date.now() - cached.at < MARKET_CACHE_MS) return cached.data;
+
+  const data = { price: null, icon: '' };
+  try {
+    const priceRes = await axios.get('https://steamcommunity.com/market/priceoverview/', {
+      params: { appid: 730, currency: 7, market_hash_name: hashName },
+      timeout: 5000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    data.price = parseSteamBRL(priceRes.data?.lowest_price || priceRes.data?.median_price);
+  } catch {}
+
+  try {
+    const searchRes = await axios.get('https://steamcommunity.com/market/search/render/', {
+      params: { appid: 730, count: 1, norender: 1, query: hashName },
+      timeout: 5000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const icon = searchRes.data?.results?.[0]?.asset_description?.icon_url;
+    if (icon) data.icon = `https://community.akamai.steamstatic.com/economy/image/${icon}/256fx192f`;
+  } catch {}
+
+  marketCache.set(hashName, { at: Date.now(), data });
+  return data;
+}
+
+async function enrichMarketItem(item) {
+  const hash = marketHash(item);
+  const market = await getSteamMarketData(hash);
+  return {
+    ...item,
+    marketHashName: hash,
+    val: market.price ?? item.val,
+    img: market.icon || item.img || '',
+  };
+}
+
+async function getCaseCatalogItem(caseId) {
+  const meta = CASE_CATALOG.find(c => c.id === caseId);
+  if (!meta) return null;
+  const market = await getSteamMarketData(meta.name);
+  return {
+    id: meta.id,
+    name: meta.name,
+    price: market.price || meta.fallback,
+    img: market.icon || `/img/cases/${meta.id}.png`,
+  };
+}
+
 const CASE_DROPS = {
-  'prisma':     [
-    {name:'AK-47 | Uncharted',val:8,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
-    {name:'USP-S | Cortex',val:12,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/usps_printstream.png'},
-    {name:'M4A1-S | Decimator',val:18,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'Glock-18 | Warhawk',val:35,wear:'Factory New',cl:'ri-purple',img:'/img/skins/glock_fade.png'},
-    {name:'AK-47 | Neon Rider',val:95,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
-    {name:'M4A1-S | Nightmare',val:180,wear:'Factory New',cl:'ri-gold',img:'/img/skins/m4a1s_printstream.png'},
+  prisma: [
+    {name:'AK-47 | Uncharted',wear:'Field-Tested',cl:'ri-gray',val:2.50},
+    {name:'Galil AR | Akoben',wear:'Minimal Wear',cl:'ri-gray',val:1.80},
+    {name:'AWP | Atheris',wear:'Field-Tested',cl:'ri-blue',val:18.00},
+    {name:'Desert Eagle | Light Rail',wear:'Factory New',cl:'ri-blue',val:16.00},
+    {name:'Five-SeveN | Angry Mob',wear:'Minimal Wear',cl:'ri-purple',val:55.00},
+    {name:'M4A4 | The Emperor',wear:'Field-Tested',cl:'ri-gold',val:145.00},
   ],
-  'revolution': [
-    {name:'AK-47 | Slate',val:15,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
-    {name:'USP-S | Jawbreaker',val:20,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/usps_printstream.png'},
-    {name:'M4A4 | Temukau',val:45,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'AWP | Duality',val:90,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
-    {name:'AK-47 | Inheritance',val:210,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
-    {name:'M4A1-S | Blackwater',val:450,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  revolution: [
+    {name:'M4A1-S | Emphorosaur-S',wear:'Field-Tested',cl:'ri-gray',val:4.00},
+    {name:'Glock-18 | Umbral Rabbit',wear:'Minimal Wear',cl:'ri-blue',val:8.00},
+    {name:'P90 | Neoqueen',wear:'Factory New',cl:'ri-blue',val:12.00},
+    {name:'AWP | Duality',wear:'Field-Tested',cl:'ri-purple',val:28.00},
+    {name:'UMP-45 | Wild Child',wear:'Minimal Wear',cl:'ri-purple',val:45.00},
+    {name:'M4A4 | Temukau',wear:'Field-Tested',cl:'ri-gold',val:150.00},
+    {name:'AK-47 | Head Shot',wear:'Field-Tested',cl:'ri-gold',val:120.00},
   ],
-  'dreams':     [
-    {name:'MP9 | Starlight Protector',val:12,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/p90_asiimov.png'},
-    {name:'MAC-10 | Light Box',val:18,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
-    {name:'P90 | Neoqueen',val:30,wear:'Factory New',cl:'ri-blue',img:'/img/skins/p90_asiimov.png'},
-    {name:'AK-47 | Head Shot',val:65,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
-    {name:'USP-S | The Traitor',val:140,wear:'Factory New',cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
-    {name:'M4A1-S | Illusion',val:380,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  dreams: [
+    {name:'USP-S | Ticket to Hell',wear:'Field-Tested',cl:'ri-gray',val:3.00},
+    {name:'MP9 | Starlight Protector',wear:'Field-Tested',cl:'ri-blue',val:14.00},
+    {name:'FAMAS | Rapid Eye Movement',wear:'Minimal Wear',cl:'ri-blue',val:20.00},
+    {name:'Dual Berettas | Melondrama',wear:'Field-Tested',cl:'ri-purple',val:32.00},
+    {name:'MP7 | Abyssal Apparition',wear:'Minimal Wear',cl:'ri-purple',val:42.00},
+    {name:'AK-47 | Nightwish',wear:'Field-Tested',cl:'ri-gold',val:95.00},
   ],
-  'fracture':   [
-    {name:'PP-Bizon | Runic',val:8,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/p90_asiimov.png'},
-    {name:'Five-SeveN | Fairy Tale',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/glock_fade.png'},
-    {name:'AK-47 | Legion of Anubis',val:40,wear:'Factory New',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
-    {name:'M4A1-S | Printstream',val:185,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'Desert Eagle | Printstream',val:220,wear:'Factory New',cl:'ri-purple',img:'/img/skins/deagle_blaze.png'},
-    {name:'Glock-18 | Vogue',val:95,wear:'Factory New',cl:'ri-gold',img:'/img/skins/glock_fade.png'},
+  fracture: [
+    {name:'PP-Bizon | Runic',wear:'Field-Tested',cl:'ri-gray',val:1.50},
+    {name:'Galil AR | Connexion',wear:'Minimal Wear',cl:'ri-blue',val:5.00},
+    {name:'Glock-18 | Vogue',wear:'Factory New',cl:'ri-blue',val:45.00},
+    {name:'XM1014 | Entombed',wear:'Minimal Wear',cl:'ri-purple',val:25.00},
+    {name:'M4A4 | Tooth Fairy',wear:'Field-Tested',cl:'ri-purple',val:28.00},
+    {name:'AK-47 | Legion of Anubis',wear:'Field-Tested',cl:'ri-gold',val:60.00},
+    {name:'Desert Eagle | Printstream',wear:'Field-Tested',cl:'ri-gold',val:230.00},
   ],
-  'riptide':    [
-    {name:'Glock-18 | Winterized',val:10,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/glock_fade.png'},
-    {name:'MP9 | Hydra',val:16,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/p90_asiimov.png'},
-    {name:'AK-47 | Aquamarine Revenge',val:55,wear:'Factory New',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
-    {name:'AWP | Aquamarine Revenge',val:85,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
-    {name:'M4A1-S | Imminent Danger',val:130,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'Karambit | Doppler',val:900,wear:'Factory New',cl:'ri-gold',img:'/img/skins/karambit_doppler.png'},
+  riptide: [
+    {name:'Glock-18 | Snack Attack',wear:'Field-Tested',cl:'ri-gray',val:12.00},
+    {name:'M4A4 | Spider Lily',wear:'Minimal Wear',cl:'ri-blue',val:15.00},
+    {name:'SSG 08 | Turbo Peek',wear:'Field-Tested',cl:'ri-blue',val:20.00},
+    {name:'MAC-10 | Toybox',wear:'Minimal Wear',cl:'ri-purple',val:36.00},
+    {name:'Desert Eagle | Ocean Drive',wear:'Field-Tested',cl:'ri-purple',val:70.00},
+    {name:'AK-47 | Leet Museo',wear:'Field-Tested',cl:'ri-gold',val:120.00},
   ],
-  'snakebite':  [
-    {name:'CZ75-Auto | Vendetta',val:9,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/glock_fade.png'},
-    {name:'AK-47 | Slate',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
-    {name:'M4A1-S | Dirt Drop',val:22,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'Ursus Knife | Doppler',val:180,wear:'Factory New',cl:'ri-purple',img:'/img/skins/karambit_doppler.png'},
-    {name:'Skeleton Knife | Safari Mesh',val:250,wear:'Factory New',cl:'ri-purple',img:'/img/skins/butterfly_fade.png'},
-    {name:'Talon Knife | Fade',val:700,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  snakebite: [
+    {name:'R8 Revolver | Junk Yard',wear:'Field-Tested',cl:'ri-gray',val:1.50},
+    {name:'Desert Eagle | Trigger Discipline',wear:'Minimal Wear',cl:'ri-blue',val:8.00},
+    {name:'AK-47 | Slate',wear:'Field-Tested',cl:'ri-blue',val:16.00},
+    {name:'Galil AR | Chromatic Aberration',wear:'Minimal Wear',cl:'ri-purple',val:35.00},
+    {name:'MP9 | Food Chain',wear:'Field-Tested',cl:'ri-purple',val:45.00},
+    {name:'USP-S | The Traitor',wear:'Field-Tested',cl:'ri-gold',val:95.00},
+    {name:'M4A4 | In Living Color',wear:'Field-Tested',cl:'ri-gold',val:90.00},
   ],
-  'clutch':     [
-    {name:'M4A4 | Neo-Noir',val:22,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'AK-47 | Neon Rider',val:85,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_asiimov.png'},
-    {name:'AWP | Hyper Beast',val:110,wear:'Factory New',cl:'ri-blue',img:'/img/skins/awp_asiimov.png'},
-    {name:'M4A1-S | Nightmare',val:175,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'USP-S | Caiman',val:28,wear:'Factory New',cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
-    {name:'Butterfly Knife | Fade',val:1200,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  clutch: [
+    {name:'Glock-18 | Moonrise',wear:'Field-Tested',cl:'ri-gray',val:4.00},
+    {name:'UMP-45 | Arctic Wolf',wear:'Minimal Wear',cl:'ri-blue',val:9.00},
+    {name:'AWP | Mortis',wear:'Field-Tested',cl:'ri-blue',val:22.00},
+    {name:'USP-S | Cortex',wear:'Field-Tested',cl:'ri-purple',val:35.00},
+    {name:'AUG | Stymphalian',wear:'Minimal Wear',cl:'ri-purple',val:42.00},
+    {name:'M4A4 | Neo-Noir',wear:'Field-Tested',cl:'ri-gold',val:95.00},
   ],
-  'spectrum2':  [
-    {name:'AK-47 | Bloodsport',val:45,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
-    {name:'Glock-18 | Twilight Galaxy',val:30,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/glock_fade.png'},
-    {name:'M4A4 | Neo-Noir',val:68,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'AWP | Fever Dream',val:120,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
-    {name:'M4A4 | Neo-Noir FN',val:200,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
-    {name:'Butterfly Knife | Crimson Web',val:850,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  spectrum2: [
+    {name:'Glock-18 | Off World',wear:'Field-Tested',cl:'ri-gray',val:2.00},
+    {name:'M4A1-S | Leaded Glass',wear:'Field-Tested',cl:'ri-blue',val:28.00},
+    {name:'R8 Revolver | Llama Cannon',wear:'Minimal Wear',cl:'ri-blue',val:35.00},
+    {name:'PP-Bizon | High Roller',wear:'Field-Tested',cl:'ri-purple',val:38.00},
+    {name:'P250 | See Ya Later',wear:'Field-Tested',cl:'ri-purple',val:50.00},
+    {name:'AK-47 | The Empress',wear:'Field-Tested',cl:'ri-gold',val:165.00},
   ],
 };
 
-function rollBattleSkin(caseId) {
+async function rollBattleSkin(caseId) {
   const drops = CASE_DROPS[caseId] || CASE_DROPS.prisma;
   const roll = Math.random() * 100;
   let rarity;
@@ -694,14 +774,14 @@ function rollBattleSkin(caseId) {
   else if (roll < 85) rarity = 'ri-purple';
   else                rarity = 'ri-gold';
   const pool = drops.filter(d => d.cl === rarity);
-  const base = (pool.length ? pool : drops)[Math.floor(Math.random() * (pool.length ? pool : drops).length)];
-  const multiplier = 0.75 + Math.random() * 0.9;
+  const base = await enrichMarketItem((pool.length ? pool : drops)[Math.floor(Math.random() * (pool.length ? pool : drops).length)]);
   return {
     name: base.name,
     img: base.img || '',
-    val: Math.max(0.01, Math.round(base.val * multiplier * 100) / 100),
+    val: Math.max(0.01, Math.round((base.val || 0) * 100) / 100),
     wear: base.wear || '',
     cl: base.cl || 'ri-blue',
+    marketHashName: base.marketHashName,
   };
 }
 
@@ -753,11 +833,11 @@ app.post('/api/battles/:id/result', requireAuth, async (req, res) => {
     }
 
     const cases = battle.cases_json || [];
-    const results = players.map(p => {
-      const skins = cases.map(c => rollBattleSkin(c.id || c.name || 'prisma'));
+    const results = await Promise.all(players.map(async p => {
+      const skins = await Promise.all(cases.map(c => rollBattleSkin(c.id || c.name || 'prisma')));
       const totalWon = skins.reduce((s, skin) => s + parseFloat(skin.val || 0), 0);
       return { ...p, skins, totalWon: Math.round(totalWon * 100) / 100 };
-    });
+    }));
 
     let winner = results[0];
     results.forEach(r => { if (r.totalWon > winner.totalWon) winner = r; });
@@ -797,8 +877,8 @@ app.post('/api/battles/:id/result', requireAuth, async (req, res) => {
 
 app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   const caseId = req.params.caseId;
-  const CASES_PRICES = {prisma:8.90,revolution:25.50,dreams:41.20,fracture:18.70,riptide:33.00,snakebite:12.40,clutch:7.60,spectrum2:55.00};
-  const price = CASES_PRICES[caseId];
+  const caseItem = await getCaseCatalogItem(caseId);
+  const price = caseItem?.price;
   if (!price) return res.status(400).json({ error: 'Caixa inválida' });
 
   const spent = await spendBalance(req, price);
@@ -826,15 +906,21 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   else                rarity = 'ri-gold';
   
   const pool = byRarity[rarity];
-  const item = pool && pool.length > 0 
+  let item = pool && pool.length > 0 
     ? pool[Math.floor(Math.random() * pool.length)]
     : drops[Math.floor(Math.random() * drops.length)];
+  item = await enrichMarketItem(item);
 
   await logTransaction(req.session.steamId, 'case_open', -price, `Caixa: ${caseId}`);
 
   await addInventoryItem(req.session.steamId, item, 'case_open');
 
   res.json({ ok: true, item, balance: spent.balance });
+});
+
+app.get('/api/catalog', async (req, res) => {
+  const enriched = await Promise.all(CASE_CATALOG.map(c => getCaseCatalogItem(c.id)));
+  res.json({ ok:true, cases: enriched });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
