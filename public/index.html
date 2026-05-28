@@ -789,7 +789,7 @@ const FALLBACK_IMGS = {
   'ri-gold':   '/img/skins/butterfly_fade.png',
 };
 function getSkinImg(skin){
-  return skin?.img || FALLBACK_IMGS[skin?.cl] || '/img/skins/ak47_bloodsport.png';
+  return skin?.img || skin?.item_img || FALLBACK_IMGS[skin?.cl] || '/img/skins/ak47_bloodsport.png';
 }
 function imgWithFallback(skin, style=''){
   const src = getSkinImg(skin);
@@ -1680,11 +1680,20 @@ async function openCase(caseId){
 
   // Pre-call API to get the winning item first, then build reel ending on it
   let winItem = null;
+  let chargedPrice = c.price;
   try{
-    const r=await fetch('/api/cases/'+caseId+'/open',{method:'POST',headers:{'Content-Type':'application/json'}});
-    const d=await r.json();
-    if(!d.ok){showNotif(d.error||'Erro','error');closeCaseOpen();caseOpenActive=false;return;}
-    winItem=d.item;
+    const {ok,data:d}=await fetchJSON('/api/cases/'+caseId+'/open',{method:'POST',headers:{'Content-Type':'application/json'}},10000);
+    if(!ok||!d.ok){showNotif(d.error||'Erro','error');closeCaseOpen();caseOpenActive=false;return;}
+    winItem={
+      ...d.item,
+      name:d.item?.name||'Item',
+      img:d.item?.img||'',
+      cl:d.item?.cl||'ri-blue',
+      val:parseFloat(d.item?.val||0),
+      wear:d.item?.wear||''
+    };
+    chargedPrice=parseFloat(d.price||c.price);
+    c.price=chargedPrice;
     balance=d.balance;updateBalance();
     const bd=document.getElementById('casesBalanceDisplay');if(bd) bd.textContent=fmt(balance);
     // Refresh platform items
@@ -1697,9 +1706,7 @@ async function openCase(caseId){
   const reelSkins=[];
   for(let i=0;i<reelCount;i++){
     if(i===winPos){
-      // Insert the actual winning skin
-      const winSkin=SKINS.find(s=>s.name===winItem.name)||rndFrom(SKINS.filter(s=>s.cl===winItem.cl)||SKINS);
-      reelSkins.push({...winSkin,isWinner:true});
+      reelSkins.push({...winItem,isWinner:true});
     } else {
       // Weighted random for fillers
       const rarity=weightedRoll();
@@ -1730,7 +1737,7 @@ async function openCase(caseId){
   // So transform = containerWidth/2 - 20 - winPos*ITEM_W - 53 + small_randomness
   const containerW = body.querySelector('div:nth-child(2)')?.offsetWidth || 620;
   const centerOffset = Math.floor(containerW/2);
-  const targetX = centerOffset - 20 - (winPos * ITEM_W) - 53 + rnd(-15,15);
+  const targetX = centerOffset - 20 - (winPos * ITEM_W) - 53;
 
   const reel=document.getElementById('caseReel');
   if(!reel){caseOpenActive=false;return;}
@@ -1746,8 +1753,7 @@ async function openCase(caseId){
   // Show result after animation
   setTimeout(()=>{
     const rc={'ri-gray':'#888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'}[winItem.cl]||'#9B4DFF';
-    const winSkinObj=SKINS.find(s=>s.name===winItem.name)||{cl:winItem.cl};
-const imgSrc=winItem.img||getSkinImg(winSkinObj);
+    const imgSrc=getSkinImg(winItem);
 
     // Flash the winner cell
     const cells=document.querySelectorAll('.reel-cell');
@@ -1766,7 +1772,7 @@ const imgSrc=winItem.img||getSkinImg(winSkinObj);
           <div style="font-size:12px;color:var(--text-dim);margin-bottom:.4rem;">${winItem.wear||''}</div>
           <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--gold);margin-bottom:1.25rem;font-weight:500;">${fmt(winItem.val)}</div>
           <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
-            <button class="btn-primary" onclick="openCase('${caseId}')">↺ Abrir Novamente (${fmt(c.price)})</button>
+            <button class="btn-primary" onclick="openCase('${caseId}')">↺ Abrir Novamente (${fmt(chargedPrice)})</button>
             <button class="btn-ghost" onclick="closeCaseOpen()">Fechar</button>
           </div>
         </div>`;

@@ -915,7 +915,7 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
 
   await addInventoryItem(req.session.steamId, item, 'case_open');
 
-  res.json({ ok: true, item, balance: spent.balance });
+  res.json({ ok: true, item, balance: spent.balance, price });
 });
 
 app.get('/api/catalog', async (req, res) => {
