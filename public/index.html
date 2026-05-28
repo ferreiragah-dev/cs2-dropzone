@@ -271,46 +271,81 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
 .sec-name{font-size:14px;font-weight:600;color:var(--text);}
 .sec-desc{font-size:12px;color:var(--text-dim);}
 
-/* BATTLE MODAL — HellCase style */
-.hc-battle{display:flex;flex-direction:column;height:100%;min-height:500px;background:var(--bg-deep);}
-.hc-topbar{background:var(--bg-panel);border-bottom:1px solid var(--border);padding:.75rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;}
-.hc-case-chip{display:flex;align-items:center;gap:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--text-muted);}
-.hc-case-chip img{width:32px;height:25px;object-fit:contain;}
+/* ═══ BATTLE ARENA ═══ */
+.hc-battle{display:flex;flex-direction:column;background:var(--bg-deep);min-height:600px;}
+.hc-topbar{background:var(--bg-panel);border-bottom:1px solid var(--border);padding:.6rem 1.25rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.hc-case-chip{display:flex;align-items:center;gap:5px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--text-muted);}
+.hc-case-chip img{width:28px;height:22px;object-fit:contain;}
 .hc-case-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06);}
-.hc-round-info{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);}
-.hc-arena{display:flex;flex:1;min-height:320px;}
-.hc-player-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;border-right:1px solid var(--border);padding:1.5rem 1rem;}
+.hc-round-info{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+/* Player zones */
+.hc-players-row{display:flex;flex:1;min-height:300px;position:relative;}
+.hc-player-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:1.25rem 1rem 4.5rem;position:relative;border-right:1px solid var(--border);transition:background .3s;}
 .hc-player-zone:last-child{border-right:none;}
-.hc-skin-reveal{width:200px;height:200px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:1rem;}
-.hc-skin-reveal::before{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid var(--border);opacity:.4;}
-.hc-skin-reveal::after{content:'';position:absolute;inset:10px;border-radius:50%;border:1px dashed var(--border-glow);opacity:.3;animation:rotateSlow 8s linear infinite;}
+.hc-player-zone.winner-zone{background:linear-gradient(180deg,rgba(255,215,0,.04) 0%,transparent 100%);}
+.hc-player-zone.loser-zone{background:linear-gradient(180deg,rgba(255,59,59,.04) 0%,transparent 100%);}
+/* Skin reveal circle */
+.hc-skin-reveal{width:180px;height:180px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:.75rem;}
+.hc-skin-circle{position:absolute;inset:0;border-radius:50%;border:2px solid var(--border-glow);opacity:.3;animation:rotateSlow 6s linear infinite;}
+.hc-skin-circle2{position:absolute;inset:12px;border-radius:50%;border:1px dashed var(--border);opacity:.2;animation:rotateSlow 10s linear infinite reverse;}
+.winner-zone .hc-skin-circle{border-color:var(--gold);opacity:.6;}
+.loser-zone .hc-skin-circle{border-color:var(--red);opacity:.4;}
 @keyframes rotateSlow{to{transform:rotate(360deg)}}
-.hc-skin-img{width:160px;height:140px;object-fit:contain;position:relative;z-index:1;transition:all .3s;filter:drop-shadow(0 0 20px rgba(0,212,255,.2));}
-.hc-skin-img.reveal-anim{animation:skinReveal .5s ease;}
-@keyframes skinReveal{0%{opacity:0;transform:scale(.6) rotate(-10deg)}60%{transform:scale(1.1) rotate(2deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
-.hc-skin-name{font-size:13px;font-weight:700;color:var(--text);text-align:center;margin-bottom:2px;}
-.hc-skin-wear{font-size:11px;color:var(--text-dim);margin-bottom:6px;}
-.hc-skin-val{font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--gold);font-weight:500;}
-.hc-player-info{display:flex;align-items:center;gap:8px;position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);white-space:nowrap;}
-.hc-player-av{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
-.hc-player-av-init{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid var(--border-glow);}
-.hc-player-name{font-size:13px;font-weight:700;}
-.hc-player-total{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);}
-.hc-player-zone.winner-zone{background:rgba(255,215,0,.03);}
-.hc-player-zone.winner-zone .hc-skin-reveal::before{border-color:var(--gold);opacity:.6;}
-.hc-winner-crown{position:absolute;top:.75rem;left:50%;transform:translateX(-50%);font-size:22px;animation:crownBounce .5s ease;}
-@keyframes crownBounce{0%{transform:translateX(-50%) scale(0)}60%{transform:translateX(-50%) scale(1.3)}100%{transform:translateX(-50%) scale(1)}}
-.hc-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);background:var(--bg-panel);display:flex;align-items:center;justify-content:center;gap:1rem;}
-.btn-spin{background:linear-gradient(135deg,var(--accent),#0099CC);border:none;border-radius:8px;padding:.65rem 3rem;font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:3px;color:#000;cursor:pointer;transition:all .2s;}
+.hc-skin-img{width:150px;height:120px;object-fit:contain;position:relative;z-index:1;transition:all .3s;filter:drop-shadow(0 4px 16px rgba(0,212,255,.15));}
+.hc-skin-img.reveal-anim{animation:skinReveal .45s cubic-bezier(.34,1.56,.64,1);}
+@keyframes skinReveal{0%{opacity:0;transform:scale(.4) rotate(-15deg)}70%{transform:scale(1.08) rotate(2deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+.hc-skin-name{font-size:12px;font-weight:700;color:var(--text);text-align:center;margin-bottom:1px;max-width:160px;}
+.hc-skin-wear{font-size:10px;color:var(--text-dim);text-align:center;margin-bottom:4px;letter-spacing:.5px;}
+.hc-skin-val{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--gold);font-weight:500;}
+/* Player info bar (bottom) */
+.hc-player-info{display:flex;align-items:center;gap:8px;position:absolute;bottom:1rem;left:0;right:0;justify-content:center;padding:0 .5rem;}
+.hc-player-av{width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
+.hc-player-av-init{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;border:2px solid var(--border-glow);flex-shrink:0;}
+.hc-player-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;}
+.hc-player-total{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);margin-left:auto;white-space:nowrap;}
+/* VS divider */
+.hc-vs-divider{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;}
+.hc-vs-img{width:72px;height:72px;background:radial-gradient(circle,rgba(255,215,0,.15),transparent 70%);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-weight:900;font-size:20px;color:var(--gold);border:2px solid rgba(255,215,0,.3);}
+/* Winner/loser overlay */
+.hc-winner-crown{position:absolute;top:.5rem;left:50%;transform:translateX(-50%);font-size:20px;animation:crownBounce .5s ease;z-index:10;}
+@keyframes crownBounce{0%{transform:translateX(-50%) scale(0) rotate(-20deg)}70%{transform:translateX(-50%) scale(1.2) rotate(5deg)}100%{transform:translateX(-50%) scale(1) rotate(0)}}
+.hc-result-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;pointer-events:none;}
+.hc-result-label{font-family:'Orbitron',monospace;font-weight:900;font-size:24px;letter-spacing:4px;padding:.5rem 1.5rem;border-radius:8px;}
+.hc-result-win{color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.6);border:2px solid rgba(255,215,0,.4);background:rgba(255,215,0,.06);}
+.hc-result-lose{color:var(--red);text-shadow:0 0 20px rgba(255,59,59,.4);border:2px solid rgba(255,59,59,.3);background:rgba(255,59,59,.04);}
+/* Skins collected row */
+.hc-skins-row{padding:.75rem 1rem;border-top:1px solid var(--border);background:var(--bg-panel);display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;min-height:80px;align-items:center;}
+.hc-skins-row::-webkit-scrollbar{height:3px;}
+.hc-skin-card{flex-shrink:0;width:80px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:4px;text-align:center;position:relative;}
+.hc-skin-card img{width:56px;height:44px;object-fit:contain;display:block;margin:0 auto;}
+.hc-skin-card-val{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--gold);margin-top:2px;}
+.hc-skin-card-name{font-size:8px;color:var(--text-dim);line-height:1.1;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hc-skin-card-wear{position:absolute;top:2px;right:2px;font-size:7px;background:var(--bg-deep);border-radius:2px;padding:1px 3px;color:var(--text-dim);}
+/* Footer */
+.hc-footer{padding:.75rem 1.25rem;border-top:1px solid var(--border);background:var(--bg-panel);display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;}
+.btn-spin{background:linear-gradient(135deg,var(--accent),#0099CC);border:none;border-radius:8px;padding:.6rem 2.5rem;font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:3px;color:#000;cursor:pointer;transition:all .2s;}
 .btn-spin:hover{box-shadow:0 0 24px rgba(0,212,255,.5);transform:translateY(-1px);}
 .btn-spin:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-.hc-vs-divider{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;font-weight:900;font-size:18px;color:var(--border-glow);z-index:5;pointer-events:none;}
-.win-banner{display:none;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:1rem;text-align:center;margin-top:1rem;}
-.win-banner.show{display:block;animation:winPop .4s ease;}
-@keyframes winPop{0%{transform:scale(1)}40%{transform:scale(1.15)}70%{transform:scale(.95)}100%{transform:scale(1.05)}}
-@keyframes skinReveal{0%{opacity:0;transform:scale(.5) rotate(-15deg)}60%{transform:scale(1.1) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
-.win-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px;color:var(--gold);margin-bottom:4px;}
-.win-sub{font-size:13px;color:var(--text-muted);}
+.win-banner{display:none;}
+.win-banner.show{display:block;}
+/* Result screen */
+.hc-final-screen{padding:1.5rem;display:flex;flex-direction:column;align-items:center;gap:1rem;}
+.hc-final-vs{display:flex;align-items:stretch;width:100%;gap:0;border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+.hc-final-player{flex:1;padding:1.25rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;}
+.hc-final-player.win-side{background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,215,0,.02));}
+.hc-final-player.lose-side{background:rgba(255,59,59,.03);}
+.hc-final-vs-center{width:80px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);font-family:'Orbitron',monospace;font-weight:900;font-size:16px;color:var(--border-glow);flex-direction:column;gap:4px;}
+.hc-final-av{width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid var(--border-glow);}
+.hc-final-av-init{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;border:3px solid var(--border-glow);}
+.hc-final-av.winner-av{border-color:var(--gold);box-shadow:0 0 20px rgba(255,215,0,.3);}
+.hc-final-name{font-size:14px;font-weight:700;}
+.hc-final-items{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:220px;}
+.hc-final-item{width:56px;height:46px;background:var(--bg-card);border-radius:5px;overflow:hidden;border:1px solid var(--border);}
+.hc-final-item img{width:100%;height:100%;object-fit:contain;}
+.hc-final-total{font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--gold);}
+.hc-final-result{font-family:'Orbitron',monospace;font-weight:900;font-size:13px;letter-spacing:3px;padding:3px 12px;border-radius:4px;}
+.hc-final-result.win{color:var(--gold);background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);}
+.hc-final-result.lose{color:var(--red);background:rgba(255,59,59,.06);border:1px solid rgba(255,59,59,.2);}
 /* legacy reel (unused but kept) */
 .ri-gray{background:rgba(107,128,153,.1);}
 .ri-blue{background:rgba(0,100,220,.12);}
@@ -1307,29 +1342,35 @@ function viewBattle(id,e){
 function closeBattle(){spinActive=false;closeModal('battleModal');}
 
 function buildArena(b){
+  const myName = user?.name||'Você';
+
   const caseChips=b.cases.map((c,i)=>`
     <div class="hc-case-chip ${i===0?'active':''}" id="hcchip_${b.id}_${i}">
-      <img src="${c.img}" style="width:32px;height:25px;object-fit:contain;" onerror="this.style.display='none'">
-      ${c.name.split(' ')[0]}
+      <img src="${c.img||''}" onerror="this.style.display='none'">
+      ${(c.name||'Case').split(' ')[0]}
     </div>`).join('');
 
   const zones=b.players.map((p,i)=>{
     if(!p) return`<div class="hc-player-zone" id="hczone_${b.id}_${i}">
-      <div class="hc-skin-reveal"><div style="color:var(--text-dim);font-size:13px;">Aguardando...</div></div>
-    </div>`;
+      <div class="hc-skin-reveal"><div class="hc-skin-circle"></div><div class="hc-skin-circle2"></div>
+        <div style="color:var(--text-dim);font-size:11px;letter-spacing:1px;">AGUARDANDO</div>
+      </div></div>`;
     const win=b.winnerIdx===i;
     const avHTML=p.avatar
-      ?`<img class="hc-player-av" src="${p.avatar}">`
+      ?`<img class="hc-player-av${win?' winner-av':''}" src="${p.avatar}">`
       :`<div class="hc-player-av-init">${(p.name||'?').slice(0,2).toUpperCase()}</div>`;
-    const firstSkin=rndFrom(SKINS);
-    const firstImg = getSkinImg(firstSkin);
-    const firstFb  = FALLBACK_IMGS[firstSkin.cl]||'/img/skins/ak47_bloodsport.png';
-    return`<div class="hc-player-zone ${win?'winner-zone':''}" id="hczone_${b.id}_${i}">
-      ${win?'<div class="hc-winner-crown">👑</div>':''}
+    const skin=rndFrom(SKINS);
+    const fb=FALLBACK_IMGS[skin.cl]||'/img/skins/ak47_bloodsport.png';
+    const doneClass=b.status==='done'?(win?'winner-zone':'loser-zone'):'';
+    const resultHTML=b.status==='done'?`<div class="hc-result-overlay"><div class="hc-result-label ${win?'hc-result-win':'hc-result-lose'}">${win?'WIN':'LOSE'}</div></div>`:'';
+    return`<div class="hc-player-zone ${doneClass}" id="hczone_${b.id}_${i}">
+      ${win?'<div class="hc-winner-crown">👑</div>':''}${resultHTML}
       <div class="hc-skin-reveal">
-        <img class="hc-skin-img" id="hcskin_${b.id}_${i}" src="${firstImg}" style="background:var(--bg-hover);" onerror="if(this.src!=='${firstFb}')this.src='${firstFb}'">
+        <div class="hc-skin-circle"></div><div class="hc-skin-circle2"></div>
+        <img class="hc-skin-img" id="hcskin_${b.id}_${i}" src="${getSkinImg(skin)}"
+             onerror="if(this.src!=='${fb}')this.src='${fb}'">
       </div>
-      <div class="hc-skin-name" id="hcskinname_${b.id}_${i}">${b.status==='done'?firstSkin.name:'—'}</div>
+      <div class="hc-skin-name" id="hcskinname_${b.id}_${i}">—</div>
       <div class="hc-skin-wear" id="hcskinwear_${b.id}_${i}"></div>
       <div class="hc-skin-val" id="hcskinval_${b.id}_${i}">${fmt(b.total/b.playerCount)}</div>
       <div class="hc-player-info">
@@ -1340,19 +1381,39 @@ function buildArena(b){
     </div>`;
   });
 
-  let arenaInner=`<div style="display:flex;flex:1;position:relative;min-height:320px;">`;
-  zones.forEach((z,i)=>{arenaInner+=z;if(i<zones.length-1) arenaInner+=`<div class="hc-vs-divider">VS</div>`;});
+  let arenaInner=`<div class="hc-players-row">`;
+  zones.forEach((z,i)=>{
+    arenaInner+=z;
+    if(i<zones.length-1) arenaInner+=`<div class="hc-vs-divider"><div class="hc-vs-img">VS</div></div>`;
+  });
   arenaInner+=`</div>`;
+
+  // Skins collected per player
+  const skinsRows=b.players.map((p,i)=>{
+    if(!p) return '';
+    const avHTML=p.avatar
+      ?`<img style="width:20px;height:20px;border-radius:50%;object-fit:cover;" src="${p.avatar}">`
+      :`<div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#2a5a8c);color:#6ab0f5;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;">${(p.name||'?').slice(0,2).toUpperCase()}</div>`;
+    return`<div style="border-top:1px solid var(--border);padding:.4rem .75rem;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:.3rem;">
+        ${avHTML}
+        <span style="font-size:11px;font-weight:600;">${p.name}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);margin-left:auto;" id="hcskinstotal_${b.id}_${i}">${fmt(b.total/b.playerCount)}</span>
+      </div>
+      <div class="hc-skins-row" id="hcskinsrow_${b.id}_${i}">
+        <span style="font-size:10px;color:var(--text-dim);">Nenhuma skin ainda...</span>
+      </div>
+    </div>`;
+  }).join('');
 
   const spinBtn=b.status==='live'
     ?`<button class="btn-spin" id="sb_${b.id}" onclick="doSpin_id(${b.id})">▶ ABRIR CAIXAS</button>`:'';
-  const winBanner=b.status==='done'&&b.winnerIdx!=null
-    ?`<div class="win-banner show"><div class="win-title">🏆 ${b.players[b.winnerIdx]?.name||'?'} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div></div>`:''
 
   return`<div class="hc-battle">
     <div class="hc-topbar">${caseChips}<span class="hc-round-info" id="hcround_${b.id}">RODADA 1 / ${b.cases.length}</span></div>
     ${arenaInner}
-    <div class="hc-footer" id="hcfooter_${b.id}">${spinBtn}${winBanner}</div>
+    <div id="hcskinsarea_${b.id}">${skinsRows}</div>
+    <div class="hc-footer" id="hcfooter_${b.id}">${spinBtn}</div>
   </div>`;
 }
 
@@ -1366,78 +1427,103 @@ function doSpin(b){
   const totalRounds=b.cases.length;
   let round=0;
   const playerTotals={};
-  filledIdxs.forEach(i=>playerTotals[i]=0);
-  const WEARS=['Factory New','Minimal Wear','Field-Tested','Well-Worn','Battle-Scarred'];
+  const playerSkins={};   // track skins per player for display
+  filledIdxs.forEach(i=>{ playerTotals[i]=0; playerSkins[i]=[]; });
+  const WEARS=['FN','MW','FT','WW','BS'];
+  const WEARS_FULL=['Factory New','Minimal Wear','Field-Tested','Well-Worn','Battle-Scarred'];
+  const myName=user?user.name:'Você';
+
+  function addSkinCard(pi, skin, val, wear){
+    const row=document.getElementById('hcskinsrow_'+b.id+'_'+pi);
+    if(!row) return;
+    // Clear placeholder
+    const placeholder=row.querySelector('span');
+    if(placeholder) placeholder.remove();
+    const fb=FALLBACK_IMGS[skin.cl]||'/img/skins/ak47_bloodsport.png';
+    const rc={'ri-gray':'#888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'}[skin.cl]||'#888';
+    const card=document.createElement('div');
+    card.className='hc-skin-card';
+    card.style.borderColor=rc+'66';
+    card.innerHTML=`
+      <div class="hc-skin-card-wear">${wear}</div>
+      <img src="${getSkinImg(skin)}" onerror="if(this.src!=='${fb}')this.src='${fb}'">
+      <div class="hc-skin-card-val">${fmt(val)}</div>
+      <div class="hc-skin-card-name">${skin.name.split('|')[0]?.trim()||skin.name}</div>`;
+    card.style.animation='modalIn .3s ease';
+    row.appendChild(card);
+    row.scrollLeft=row.scrollWidth;
+  }
 
   function revealRound(){
     if(round>=totalRounds){
-      // Winner = highest total
+      // Winner = highest total skin value
       let winnerIdx=filledIdxs[0];
       filledIdxs.forEach(i=>{if(playerTotals[i]>playerTotals[winnerIdx]) winnerIdx=i;});
-      b.status='done';b.winnerIdx=winnerIdx;spinActive=false;
+      b.status='done'; b.winnerIdx=winnerIdx; spinActive=false;
 
+      // Prize = sum of ALL skins from all players (winner takes all)
+      const totalPrize=Object.values(playerTotals).reduce((s,v)=>s+v,0);
+
+      // Update zones
       filledIdxs.forEach(i=>{
         const z=document.getElementById('hczone_'+b.id+'_'+i);
         if(!z) return;
         z.classList.toggle('winner-zone',i===winnerIdx);
+        z.classList.toggle('loser-zone',i!==winnerIdx);
+        // Add result label
+        if(!z.querySelector('.hc-result-overlay')){
+          const ov=document.createElement('div');
+          ov.className='hc-result-overlay';
+          ov.innerHTML=`<div class="hc-result-label ${i===winnerIdx?'hc-result-win':'hc-result-lose'}">${i===winnerIdx?'WIN':'LOSE'}</div>`;
+          z.prepend(ov);
+        }
         if(i===winnerIdx&&!z.querySelector('.hc-winner-crown')){
           const c=document.createElement('div');c.className='hc-winner-crown';c.textContent='👑';z.prepend(c);
         }
       });
 
+      // Footer: show result
       const footer=document.getElementById('hcfooter_'+b.id);
       const wn=b.players[winnerIdx]?.name||'?';
-      if(footer) footer.innerHTML=`<div class="win-banner show"><div class="win-title">🏆 ${wn} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div></div>`;
+      const iWon=b.players[winnerIdx]?.name===myName;
+      if(footer) footer.innerHTML=`
+        <div style="text-align:center;">
+          <div style="font-family:'Orbitron',monospace;font-size:${iWon?'20px':'16px'};font-weight:900;letter-spacing:3px;color:${iWon?'var(--gold)':'var(--red)'};text-shadow:0 0 20px ${iWon?'rgba(255,215,0,.5)':'rgba(255,59,59,.4)'};margin-bottom:.25rem;">
+            ${iWon?'🏆 VOCÊ VENCEU!':'💀 VOCÊ PERDEU'}
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:${iWon?'18px':'13px'};color:${iWon?'var(--gold)':'var(--text-muted)'};">
+            ${iWon?`+${fmt(totalPrize)}`:`${wn} ganhou ${fmt(totalPrize)}`}
+          </div>
+        </div>`;
 
-      const myName=user?user.name:'Você';
-      // Build results for API
-      const playerResults = filledIdxs.map(pi => ({
-        steamId: b.players[pi]?.steamId || null,
-        skins: [], // skins revealed during battle (tracked per round)
+      // API call
+      const playerResults=filledIdxs.map(pi=>({
+        steamId: b.players[pi]?.steamId||null,
+        skins: playerSkins[pi].map(s=>({name:s.skin.name,img:getSkinImg(s.skin),val:s.val,wear:WEARS_FULL[WEARS.indexOf(s.wear)]||s.wear})),
         totalWon: playerTotals[pi]||0,
       }));
 
-      if(b.players[winnerIdx]?.name===myName){
-        // Call finish API to credit balance and save items
-        if(b.fromServer && user){
-          fetch('/api/battles/'+b.id+'/finish',{
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({results: playerResults})
-          }).then(r=>r.json()).then(d=>{
-            // Refresh balance from server
-            return fetch('/api/me');
-          }).then(r=>r.json()).then(d=>{
-            if(d.loggedIn){ balance=d.user.balance; updateBalance(); }
-          }).catch(()=>{ balance+=b.total; updateBalance(); });
-        } else {
-          balance+=b.total; updateBalance();
-        }
-        localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:b.total,date:new Date().toLocaleDateString('pt-BR')});
-        showNotif(`🏆 Você ganhou ${fmt(b.total)}!`,'success');
-        setTimeout(()=>loadMyItems(), 1500);
+      if(iWon){
+        if(b.fromServer&&user){
+          fetch('/api/battles/'+b.id+'/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:playerResults})})
+          .then(()=>fetch('/api/me')).then(r=>r.json()).then(d=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}})
+          .catch(()=>{balance+=totalPrize;updateBalance();});
+        } else { balance+=totalPrize; updateBalance(); }
+        localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:totalPrize,date:new Date().toLocaleDateString('pt-BR')});
+        showNotif(`🏆 Você ganhou ${fmt(totalPrize)}!`,'success');
+        setTimeout(()=>loadMyItems(),1500);
       } else if(b.players.some(p=>p&&p.name===myName)){
-        // Finish API even for losers (to record result)
-        if(b.fromServer && user){
-          fetch('/api/battles/'+b.id+'/finish',{
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({results: playerResults})
-          }).then(()=>fetch('/api/me')).then(r=>r.json()).then(d=>{
-            if(d.loggedIn){ balance=d.user.balance; updateBalance(); }
-          }).catch(()=>{});
+        if(b.fromServer&&user){
+          fetch('/api/battles/'+b.id+'/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:playerResults})})
+          .then(()=>fetch('/api/me')).then(r=>r.json()).then(d=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}}).catch(()=>{});
         }
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'L',bet:b.total/b.playerCount,prize:0,date:new Date().toLocaleDateString('pt-BR')});
-      } else if(b.fromServer) {
-        // Spectator — just finish
-        fetch('/api/battles/'+b.id+'/finish',{
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({results: playerResults})
-        }).catch(()=>{});
       }
       renderBattles();
       return;
     }
 
-    // Update UI
+    // Update round indicator
     const roundEl=document.getElementById('hcround_'+b.id);
     if(roundEl) roundEl.textContent=`RODADA ${round+1} / ${totalRounds}`;
     document.querySelectorAll(`[id^="hcchip_${b.id}_"]`).forEach((el,i)=>el.classList.toggle('active',i===round));
@@ -1447,9 +1533,12 @@ function doSpin(b){
       setTimeout(()=>{
         const skin=rndFrom(SKINS);
         const val=skin.val*(0.4+Math.random()*2.2);
+        const wear=rndFrom(WEARS);
         playerTotals[pi]+=val;
+        playerSkins[pi].push({skin,val,wear});
 
-      const imgEl=document.getElementById('hcskin_'+b.id+'_'+pi);
+        // Update main skin display
+        const imgEl=document.getElementById('hcskin_'+b.id+'_'+pi);
         if(imgEl){
           const fb=FALLBACK_IMGS[skin.cl]||'/img/skins/ak47_bloodsport.png';
           imgEl.onerror=function(){if(this.src!==fb){this.src=fb;}this.onerror=null;};
@@ -1457,9 +1546,16 @@ function doSpin(b){
           imgEl.classList.remove('reveal-anim');void imgEl.offsetWidth;imgEl.classList.add('reveal-anim');
         }
         const n=document.getElementById('hcskinname_'+b.id+'_'+pi);if(n) n.textContent=skin.name;
-        const w=document.getElementById('hcskinwear_'+b.id+'_'+pi);if(w) w.textContent=rndFrom(WEARS);
+        const w=document.getElementById('hcskinwear_'+b.id+'_'+pi);if(w) w.textContent=WEARS_FULL[WEARS.indexOf(wear)]||wear;
         const v=document.getElementById('hcskinval_'+b.id+'_'+pi);if(v) v.textContent=fmt(val);
         const t=document.getElementById('hctotal_'+b.id+'_'+pi);if(t) t.textContent=fmt(playerTotals[pi]);
+
+        // Add skin card to row
+        addSkinCard(pi,skin,val,wear);
+
+        // Update player skins total
+        const st=document.getElementById('hcskinstotal_'+b.id+'_'+pi);
+        if(st) st.textContent=fmt(playerTotals[pi]);
 
         if(ri===filledIdxs.length-1) setTimeout(()=>{round++;revealRound();},1800);
       },ri*700);
@@ -1467,6 +1563,7 @@ function doSpin(b){
   }
   setTimeout(()=>revealRound(),300);
 }
+
 
 // ─── CASES SHOP ──────────────────────────────────────────────────────────────
 function showCases(){
