@@ -1674,7 +1674,6 @@ async function openCase(caseId){
     const fb2=FALLBACK_IMGS[skin.cl]||'/img/skins/ak47_bloodsport.png';
     return`<div class="reel-cell" style="flex-shrink:0;width:106px;height:96px;border-radius:8px;background:var(--bg-hover);${border}display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;gap:4px;">
       <img src="${getSkinImg(skin)}" style="width:68px;height:52px;object-fit:contain;" onerror="if(this.src!=='${fb2}')this.src='${fb2}'">
-      <div style="font-size:9px;color:${rc};text-align:center;line-height:1.1;font-weight:600;">${skin.name.split('|')[1]?.trim()||skin.name.split('|')[0]}</div>
     </div>`;
   }
 
