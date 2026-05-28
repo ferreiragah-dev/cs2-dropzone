@@ -833,11 +833,22 @@ const fmt=v=>'R$ '+v.toFixed(2).replace('.',',');
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const rndFrom=arr=>arr[rnd(0,arr.length-1)];
 
+async function fetchJSON(url, options={}, timeoutMs=8000){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const r=await fetch(url,{...options,signal:controller.signal});
+    const d=await r.json().catch(()=>({}));
+    return {ok:r.ok,data:d,status:r.status};
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init(){
   try{
-    const r=await fetch('/api/me');
-    const d=await r.json();
+    const {data:d}=await fetchJSON('/api/me',{},5000);
     if(d.loggedIn){
       user=d.user;
       tradeLink=user.tradeLink||'';
@@ -1026,8 +1037,7 @@ let myPlatformItems = [];
 
 async function loadMyItems(){
   try{
-    const r = await fetch('/api/inventory');
-    const d = await r.json();
+    const {data:d} = await fetchJSON('/api/inventory',{},6000);
     if(d.items) myPlatformItems = d.items;
   }catch(e){ console.warn('loadMyItems error:', e); }
   renderMyItemsTab();
@@ -1751,12 +1761,16 @@ let lastBattlesHash='';
 let pollFailed = 0;
 async function pollBattles(){
   try{
-    const r=await fetch('/api/battles');
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const d=await r.json();
+    const {ok,data:d,status}=await fetchJSON('/api/battles',{},6000);
+    if(!ok) throw new Error('HTTP '+status);
     if(!d.battles) return;
     pollFailed = 0;
-    const hash=JSON.stringify(d.battles.map(b=>({id:b.id,status:b.status,pc:b.player_count})));
+    const hash=JSON.stringify(d.battles.map(b=>({
+      id:b.id,
+      status:b.status,
+      pc:b.player_count,
+      players:(b.players||[]).map(p=>p&&p.steam_id?p.steam_id:null).join(',')
+    })));
     if(hash===lastBattlesHash) return;
     lastBattlesHash=hash;
     battles=d.battles.map(b=>({
@@ -1821,12 +1835,12 @@ async function confirmCreate(){
 
   if(user){
     try{
-      const r=await fetch('/api/battles',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({cases:cArr,playerCount:selPlayers_,botMode:selBotMode})});
-      const d=await r.json();
-      if(!d.ok){showNotif(d.error||'Erro ao criar batalha','error');return;}
+      const {ok,data:d}=await fetchJSON('/api/battles',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({cases:cArr,playerCount:selPlayers_,botMode:selBotMode})},8000);
+      if(!ok||!d.ok){showNotif(d.error||'Erro ao criar batalha','error');return;}
       balance=d.balance;updateBalance();
       closeModal('createModal');
+      lastBattlesHash='';
       await pollBattles();
       if(d.status==='live'){
         showNotif('Batalha solo criada contra o BOT DA CASA!','success');
@@ -1860,11 +1874,11 @@ async function joinBattle(id,e){
 
   if(b.fromServer){
     try{
-      const r=await fetch('/api/battles/'+id+'/join',{method:'POST',headers:{'Content-Type':'application/json'}});
-      const d=await r.json();
-      if(!d.ok){showNotif(d.error||'Erro','error');return;}
+      const {ok,data:d}=await fetchJSON('/api/battles/'+id+'/join',{method:'POST',headers:{'Content-Type':'application/json'}},8000);
+      if(!ok||!d.ok){showNotif(d.error||'Erro','error');return;}
       balance=d.balance;updateBalance();
       showNotif('Você entrou na batalha!','success');
+      lastBattlesHash='';
       await pollBattles();
       const updated=battles.find(x=>x.id===id);
       if(updated&&updated.status==='live') setTimeout(()=>viewBattle(id,null),400);
@@ -1897,8 +1911,7 @@ async function updateOnlineCount(){
   const el=document.getElementById('onlineCnt');
   if(!el) return;
   try{
-    const r=await fetch('/api/online');
-    const d=await r.json();
+    const {data:d}=await fetchJSON('/api/online',{},4000);
     el.textContent=String(d.online||0);
   }catch(e){
     el.textContent='0';
