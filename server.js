@@ -76,6 +76,21 @@ async function addInventoryItem(steamId, item, source = 'battle', client = pool)
   }
 }
 
+function rowToInventoryItem(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    item_name: row.item_name,
+    item_img: row.item_img,
+    item_value: parseFloat(row.item_value || 0),
+    rarity_color: row.rarity_color,
+    wear: row.wear || '',
+    tradable: row.tradable,
+    source: row.source,
+    acquired_at: row.acquired_at,
+  };
+}
+
 async function ensureHouseBot(client = pool) {
   await client.query(
     `INSERT INTO users (steam_id, name, avatar, balance)
@@ -349,9 +364,17 @@ app.post('/api/deposit', requireAuth, async (req, res) => {
 app.get('/api/inventory', requireAuth, async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT id, item_name, item_img, item_value, rarity_color, wear, tradable, source,
-              acquired_at
-       FROM inventory WHERE steam_id=$1 ORDER BY acquired_at DESC LIMIT 200`,
+      `SELECT i.id, i.item_name, i.item_img, i.item_value, i.rarity_color, i.wear, i.tradable, i.source,
+              i.acquired_at
+       FROM inventory i
+       WHERE i.steam_id=$1
+         AND NOT EXISTS (
+           SELECT 1 FROM battles b
+           WHERE b.wager_item_id=i.id
+             AND b.status IN ('open','live')
+             AND b.wager_awarded=FALSE
+         )
+       ORDER BY i.acquired_at DESC LIMIT 200`,
       [req.session.steamId]
     );
     res.json({ items: r.rows });
@@ -402,6 +425,7 @@ app.get('/api/battles', async (req, res) => {
 // Criar batalha
 app.post('/api/battles', requireAuth, async (req, res) => {
   const { cases } = req.body;
+  const wagerItemId = req.body.wagerItemId ? parseInt(req.body.wagerItemId, 10) : null;
   const botMode = req.body.botMode === true || req.body.botMode === 'true';
   let playerCount = parseInt(req.body.playerCount, 10);
   if (botMode) playerCount = 2;
@@ -419,6 +443,31 @@ app.post('/api/battles', requireAuth, async (req, res) => {
     await ensureSessionUser(req, client);
     if (botMode) await ensureHouseBot(client);
 
+    let wagerItem = null;
+    if (wagerItemId) {
+      const wagerRes = await client.query(
+        `SELECT *
+         FROM inventory
+         WHERE id=$1 AND steam_id=$2 AND tradable=TRUE
+         FOR UPDATE`,
+        [wagerItemId, req.session.steamId]
+      );
+      wagerItem = rowToInventoryItem(wagerRes.rows[0]);
+      if (!wagerItem) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Item inválido ou indisponível para aposta' });
+      }
+      const locked = await client.query(
+        `SELECT 1 FROM battles
+         WHERE wager_item_id=$1 AND status IN ('open','live') AND wager_awarded=FALSE`,
+        [wagerItemId]
+      );
+      if (locked.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Este item já está apostado em outra batalha' });
+      }
+    }
+
     const balRes = await client.query('SELECT balance FROM users WHERE steam_id=$1 FOR UPDATE', [req.session.steamId]);
     const spent = await spendBalance(req, userCost, client, balRes.rows[0]?.balance);
     if (!spent.ok) {
@@ -427,8 +476,18 @@ app.post('/api/battles', requireAuth, async (req, res) => {
     }
 
     const battleRes = await client.query(
-      'INSERT INTO battles(player_count,cases_json,total_value,created_by,status) VALUES($1,$2,$3,$4,$5) RETURNING *',
-      [playerCount, JSON.stringify(battleCases), totalValue, req.session.steamId, botMode ? 'live' : 'open']
+      `INSERT INTO battles(player_count,cases_json,total_value,created_by,status,wager_item_id,wager_owner_steam_id,wager_item_snapshot)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [
+        playerCount,
+        JSON.stringify(battleCases),
+        totalValue + (wagerItem ? wagerItem.item_value : 0),
+        req.session.steamId,
+        botMode ? 'live' : 'open',
+        wagerItem ? wagerItem.id : null,
+        wagerItem ? req.session.steamId : null,
+        wagerItem ? JSON.stringify(wagerItem) : null
+      ]
     );
     const battle = battleRes.rows[0];
 
@@ -862,6 +921,15 @@ app.post('/api/battles/:id/result', requireAuth, async (req, res) => {
       await client.query('UPDATE users SET balance=balance+$1 WHERE steam_id=$2', [prizeTotal, winner.steamId]);
       await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
         [winner.steamId, 'battle_win', prizeTotal, 'Vitória na batalha #'+battleId]);
+    }
+
+    if (battle.wager_item_id && !battle.wager_awarded) {
+      await client.query('UPDATE inventory SET steam_id=$1 WHERE id=$2', [winner.steamId, battle.wager_item_id]);
+      await client.query('UPDATE battles SET wager_awarded=TRUE WHERE id=$1', [battleId]);
+      if (winner.steamId !== battle.wager_owner_steam_id) {
+        await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
+          [winner.steamId, 'item_win', 0, 'Item apostado ganho na batalha #'+battleId]);
+      }
     }
 
     await client.query('COMMIT');

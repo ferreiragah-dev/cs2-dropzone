@@ -746,6 +746,13 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
         <div class="chosen-list" id="chosenList"><span style="font-size:12px;color:var(--text-dim)">Nenhuma caixa</span></div>
         <div class="chosen-total" id="chosenTotal">R$ 0,00</div>
       </div>
+      <div class="section-label">Apostar item próprio (opcional)</div>
+      <div class="chosen-bar" style="align-items:flex-start;gap:1rem;">
+        <div class="chosen-list" id="wagerPreview"><span style="font-size:12px;color:var(--text-dim)">Nenhum item apostado</span></div>
+        <select class="tl-input" id="wagerSelect" style="max-width:280px;" onchange="selWagerItem(this.value)">
+          <option value="">Sem item</option>
+        </select>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal('createModal')">Cancelar</button>
@@ -817,6 +824,7 @@ let battles=[];
 let selCases={};
 let selPlayers_=2;
 let selBotMode=false;
+let selWagerItemId='';
 let spinActive=false;
 let currentBattleId=null;
 let currentFilter='all';
@@ -1047,6 +1055,7 @@ async function loadMyItems(){
     if(d.items) myPlatformItems = d.items;
   }catch(e){ console.warn('loadMyItems error:', e); }
   renderMyItemsTab();
+  renderWagerOptions();
 }
 
 function renderMyItemsTab(){
@@ -1092,6 +1101,39 @@ function renderMyItemsTab(){
       <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);text-align:center;margin-top:4px;">${fmt(val)}</div>
     </div>`;
   }).join('');
+}
+
+function renderWagerOptions(){
+  const sel=document.getElementById('wagerSelect');
+  if(!sel) return;
+  const current=selWagerItemId;
+  sel.innerHTML='<option value="">Sem item</option>'+myPlatformItems.map(item=>{
+    const name=item.item_name||item.name||'Item';
+    const val=parseFloat((item.item_value ?? item.val) || 0);
+    return `<option value="${item.id}">${name} - ${fmt(val)}</option>`;
+  }).join('');
+  sel.value=current&&myPlatformItems.some(i=>String(i.id)===String(current))?current:'';
+  selWagerItemId=sel.value;
+  updateWagerPreview();
+}
+
+function selWagerItem(id){
+  selWagerItemId=id||'';
+  updateWagerPreview();
+}
+
+function updateWagerPreview(){
+  const el=document.getElementById('wagerPreview');
+  if(!el) return;
+  if(!selWagerItemId){
+    el.innerHTML='<span style="font-size:12px;color:var(--text-dim)">Nenhum item apostado</span>';
+    return;
+  }
+  const item=myPlatformItems.find(i=>String(i.id)===String(selWagerItemId));
+  if(!item){el.innerHTML='<span style="font-size:12px;color:var(--text-dim)">Item indisponível</span>';return;}
+  const name=item.item_name||item.name||'Item';
+  const val=parseFloat((item.item_value ?? item.val) || 0);
+  el.innerHTML=`<div class="chosen-pill">${name} - ${fmt(val)}</div>`;
 }
 
 function renderInventoryTab(){
@@ -1309,7 +1351,9 @@ function filterBattles(f,el){
 
 // CREATE
 function openCreate(){
-  selCases={};selPlayers_=2;selBotMode=false;renderCasesGrid();updateChosen();
+  selCases={};selPlayers_=2;selBotMode=false;selWagerItemId='';renderCasesGrid();updateChosen();
+  loadMyItems();
+  renderWagerOptions();
   document.querySelectorAll('#playerConfig .player-opt').forEach(e=>e.classList.toggle('selected',e.dataset.val==='2'));
   document.getElementById('createModal').classList.add('open');
 }
@@ -1374,6 +1418,11 @@ function buildArena(b){
       <img src="${c.img||''}" onerror="this.style.display='none'">
       ${(c.name||'Case').split(' ')[0]}
     </div>`).join('');
+  const wagerChip=b.wagerItem?`
+    <div class="hc-case-chip" style="border-color:var(--gold);color:var(--gold);">
+      <img src="${b.wagerItem.item_img||''}" onerror="this.style.display='none'">
+      ITEM APOSTADO
+    </div>`:'';
 
   const zones=b.players.map((p,i)=>{
     if(!p) return`<div class="hc-player-zone" id="hczone_${b.id}_${i}">
@@ -1444,7 +1493,7 @@ function buildArena(b){
   }
 
   return`<div class="hc-battle">
-    <div class="hc-topbar">${caseChips}<span class="hc-round-info" id="hcround_${b.id}">RODADA 1 / ${b.cases.length}</span></div>
+    <div class="hc-topbar">${caseChips}${wagerChip}<span class="hc-round-info" id="hcround_${b.id}">RODADA 1 / ${b.cases.length}</span></div>
     ${arenaInner}
     <div id="hcskinsarea_${b.id}">${skinsRows}</div>
     <div class="hc-footer" id="hcfooter_${b.id}">${spinBtn}</div>
@@ -1531,6 +1580,7 @@ async function doSpin(b){
       const wn=b.players[winnerIdx]?.name||'?';
       const winnerPlayer=b.players[winnerIdx];
       const iWon=user&&winnerPlayer?.steamId ? winnerPlayer.steamId===user.steamId : winnerPlayer?.name===myName;
+      const iParticipated=b.players.some(p=>p&&(user&&p.steamId?p.steamId===user.steamId:p.name===myName));
       if(footer) footer.innerHTML=`
         <div style="text-align:center;">
           <div style="font-family:'Orbitron',monospace;font-size:${iWon?'20px':'16px'};font-weight:900;letter-spacing:3px;color:${iWon?'var(--gold)':'var(--red)'};text-shadow:0 0 20px ${iWon?'rgba(255,215,0,.5)':'rgba(255,59,59,.4)'};margin-bottom:.25rem;">
@@ -1554,13 +1604,13 @@ async function doSpin(b){
         } else { balance+=totalPrize; updateBalance(); }
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:totalPrize,date:new Date().toLocaleDateString('pt-BR')});
         showNotif(`🏆 Você ganhou ${fmt(totalPrize)}!`,'success');
-        setTimeout(()=>loadMyItems(),1500);
-      } else if(b.players.some(p=>p&&(user&&p.steamId?p.steamId===user.steamId:p.name===myName))){
+      } else if(iParticipated){
         if(b.fromServer&&user){
           fetchJSON('/api/me',{},5000).then(({data:d})=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}}).catch(()=>{});
         }
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'L',bet:b.total/b.playerCount,prize:0,date:new Date().toLocaleDateString('pt-BR')});
       }
+      if(iParticipated) setTimeout(()=>loadMyItems(),1500);
       renderBattles();
       return;
     }
@@ -1790,6 +1840,13 @@ let pollInterval=null;
 let lastBattlesHash='';
 
 let pollFailed = 0;
+function parseWagerSnapshot(v){
+  if(!v) return null;
+  if(typeof v==='string'){
+    try{return JSON.parse(v);}catch(e){return null;}
+  }
+  return v;
+}
 async function pollBattles(){
   try{
     const {ok,data:d,status}=await fetchJSON('/api/battles',{},6000);
@@ -1818,6 +1875,8 @@ async function pollBattles(){
       winnerIdx:null,
       winnerSteamId:b.winner_steam_id||null,
       createdBy:b.created_by||null,
+      wagerItem:parseWagerSnapshot(b.wager_item_snapshot),
+      wagerOwnerSteamId:b.wager_owner_steam_id||null,
       players:Array.from({length:b.player_count},(_,i)=>{
         const p=(b.players||[]).find(x=>x&&x.slot_index===i);
         if(!p||!p.steam_id) return null;
@@ -1881,7 +1940,7 @@ async function confirmCreate(){
   if(user){
     try{
       const {ok,data:d}=await fetchJSON('/api/battles',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({cases:cArr,playerCount:selPlayers_,botMode:selBotMode})},8000);
+        body:JSON.stringify({cases:cArr,playerCount:selPlayers_,botMode:selBotMode,wagerItemId:selWagerItemId||null})},8000);
       if(!ok||!d.ok){showNotif(d.error||'Erro ao criar batalha','error');return;}
       balance=d.balance;updateBalance();
       closeModal('createModal');

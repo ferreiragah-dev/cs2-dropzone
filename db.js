@@ -83,6 +83,12 @@ async function initDB() {
         description     TEXT,
         created_at      TIMESTAMPTZ DEFAULT NOW()
       );
+
+      ALTER TABLE battles
+        ADD COLUMN IF NOT EXISTS wager_item_id INTEGER REFERENCES inventory(id),
+        ADD COLUMN IF NOT EXISTS wager_owner_steam_id TEXT REFERENCES users(steam_id),
+        ADD COLUMN IF NOT EXISTS wager_item_snapshot JSONB DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS wager_awarded BOOLEAN DEFAULT FALSE;
     `);
     console.log('✓ Banco de dados inicializado');
   } finally {
