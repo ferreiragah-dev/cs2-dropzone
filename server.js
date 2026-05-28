@@ -398,68 +398,68 @@ app.post('/api/battles/:id/finish', requireAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const CASE_DROPS = {
   'prisma':     [
-    {name:'AK-47 | Uncharted',val:8,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/330x192'},
-    {name:'USP-S | Cortex',val:12,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fAo9_y3VDi_UY6ZWundYWXdlhiNfEHKg/330x192'},
-    {name:'M4A1-S | Decimator',val:18,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'Glock-18 | Warhawk',val:35,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A/330x192'},
-    {name:'AK-47 | Neon Rider',val:95,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA/330x192'},
-    {name:'M4A1-S | Nightmare',val:180,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
+    {name:'AK-47 | Uncharted',val:8,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'USP-S | Cortex',val:12,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/usps_printstream.png'},
+    {name:'M4A1-S | Decimator',val:18,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Glock-18 | Warhawk',val:35,wear:'Factory New',cl:'ri-purple',img:'/img/skins/glock_fade.png'},
+    {name:'AK-47 | Neon Rider',val:95,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
+    {name:'M4A1-S | Nightmare',val:180,wear:'Factory New',cl:'ri-gold',img:'/img/skins/m4a1s_printstream.png'},
   ],
   'revolution': [
-    {name:'AK-47 | Slate',val:15,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/330x192'},
-    {name:'USP-S | Jawbreaker',val:20,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fAo9_y3VDi_UY6ZWundYWXdlhiNfEHKg/330x192'},
-    {name:'M4A4 | Temukau',val:45,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'AWP | Duality',val:90,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7jEp9-k2lLi_UdvZmimcdKRMlhkGYGV2w/330x192'},
-    {name:'AK-47 | Inheritance',val:210,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA/330x192'},
-    {name:'M4A1-S | Blackwater',val:450,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA/330x192'},
+    {name:'AK-47 | Slate',val:15,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'USP-S | Jawbreaker',val:20,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/usps_printstream.png'},
+    {name:'M4A4 | Temukau',val:45,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'AWP | Duality',val:90,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
+    {name:'AK-47 | Inheritance',val:210,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
+    {name:'M4A1-S | Blackwater',val:450,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
   ],
   'dreams':     [
-    {name:'MP9 | Starlight Protector',val:12,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7TUo9mi2FDs-UVpYmincdKXMlhniPIFzw/330x192'},
-    {name:'MAC-10 | Light Box',val:18,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/330x192'},
-    {name:'P90 | Neoqueen',val:30,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7TUo9mi2FDs-UVpYmincdKXMlhniPIFzw/330x192'},
-    {name:'AK-47 | Head Shot',val:65,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA/330x192'},
-    {name:'USP-S | The Traitor',val:140,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fAo9_y3VDi_UY6ZWundYWXdlhiNfEHKg/330x192'},
-    {name:'M4A1-S | Illusion',val:380,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA/330x192'},
+    {name:'MP9 | Starlight Protector',val:12,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/p90_asiimov.png'},
+    {name:'MAC-10 | Light Box',val:18,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'P90 | Neoqueen',val:30,wear:'Factory New',cl:'ri-blue',img:'/img/skins/p90_asiimov.png'},
+    {name:'AK-47 | Head Shot',val:65,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
+    {name:'USP-S | The Traitor',val:140,wear:'Factory New',cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
+    {name:'M4A1-S | Illusion',val:380,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
   ],
   'fracture':   [
-    {name:'PP-Bizon | Runic',val:8,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7TUo9mi2FDs-UVpYmincdKXMlhniPIFzw/330x192'},
-    {name:'Five-SeveN | Fairy Tale',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A/330x192'},
-    {name:'AK-47 | Legion of Anubis',val:40,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/330x192'},
-    {name:'M4A1-S | Printstream',val:185,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'Desert Eagle | Printstream',val:220,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5MB1i7mTpd6h0VK2_kI-ZWykd9KRMlhqMXGmEA/330x192'},
-    {name:'Glock-18 | Vogue',val:95,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A/330x192'},
+    {name:'PP-Bizon | Runic',val:8,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/p90_asiimov.png'},
+    {name:'Five-SeveN | Fairy Tale',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/glock_fade.png'},
+    {name:'AK-47 | Legion of Anubis',val:40,wear:'Factory New',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'M4A1-S | Printstream',val:185,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Desert Eagle | Printstream',val:220,wear:'Factory New',cl:'ri-purple',img:'/img/skins/deagle_blaze.png'},
+    {name:'Glock-18 | Vogue',val:95,wear:'Factory New',cl:'ri-gold',img:'/img/skins/glock_fade.png'},
   ],
   'riptide':    [
-    {name:'Glock-18 | Winterized',val:10,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A/330x192'},
-    {name:'MP9 | Hydra',val:16,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7TUo9mi2FDs-UVpYmincdKXMlhniPIFzw/330x192'},
-    {name:'AK-47 | Aquamarine Revenge',val:55,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/330x192'},
-    {name:'AWP | Aquamarine Revenge',val:85,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7jEp9-k2lLi_UdvZmimcdKRMlhkGYGV2w/330x192'},
-    {name:'M4A1-S | Imminent Danger',val:130,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'Karambit | Doppler',val:900,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1hLzAoNus3Fri_0VuMmrxdYSWdA1rjg7V-tA/330x192'},
+    {name:'Glock-18 | Winterized',val:10,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/glock_fade.png'},
+    {name:'MP9 | Hydra',val:16,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/p90_asiimov.png'},
+    {name:'AK-47 | Aquamarine Revenge',val:55,wear:'Factory New',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'AWP | Aquamarine Revenge',val:85,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
+    {name:'M4A1-S | Imminent Danger',val:130,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Karambit | Doppler',val:900,wear:'Factory New',cl:'ri-gold',img:'/img/skins/karambit_doppler.png'},
   ],
   'snakebite':  [
-    {name:'CZ75-Auto | Vendetta',val:9,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A/330x192'},
-    {name:'AK-47 | Slate',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/330x192'},
-    {name:'M4A1-S | Dirt Drop',val:22,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'Ursus Knife | Doppler',val:180,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1hLzAoNus3Fri_0VuMmrxdYSWdA1rjg7V-tA/330x192'},
-    {name:'Skeleton Knife | Safari Mesh',val:250,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA/330x192'},
-    {name:'Talon Knife | Fade',val:700,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA/330x192'},
+    {name:'CZ75-Auto | Vendetta',val:9,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/glock_fade.png'},
+    {name:'AK-47 | Slate',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'M4A1-S | Dirt Drop',val:22,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Ursus Knife | Doppler',val:180,wear:'Factory New',cl:'ri-purple',img:'/img/skins/karambit_doppler.png'},
+    {name:'Skeleton Knife | Safari Mesh',val:250,wear:'Factory New',cl:'ri-purple',img:'/img/skins/butterfly_fade.png'},
+    {name:'Talon Knife | Fade',val:700,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
   ],
   'clutch':     [
-    {name:'M4A4 | Neo-Noir',val:22,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'AK-47 | Neon Rider',val:85,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA/330x192'},
-    {name:'AWP | Hyper Beast',val:110,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7jEp9-k2lLi_UdvZmimcdKRMlhkGYGV2w/330x192'},
-    {name:'M4A1-S | Nightmare',val:175,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'USP-S | Caiman',val:28,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fAo9_y3VDi_UY6ZWundYWXdlhiNfEHKg/330x192'},
-    {name:'Butterfly Knife | Fade',val:1200,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA/330x192'},
+    {name:'M4A4 | Neo-Noir',val:22,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'AK-47 | Neon Rider',val:85,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_asiimov.png'},
+    {name:'AWP | Hyper Beast',val:110,wear:'Factory New',cl:'ri-blue',img:'/img/skins/awp_asiimov.png'},
+    {name:'M4A1-S | Nightmare',val:175,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'USP-S | Caiman',val:28,wear:'Factory New',cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
+    {name:'Butterfly Knife | Fade',val:1200,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
   ],
   'spectrum2':  [
-    {name:'AK-47 | Bloodsport',val:45,wear:'Field-Tested',cl:'ri-gray',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg/330x192'},
-    {name:'Glock-18 | Twilight Galaxy',val:30,wear:'Minimal Wear',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A/330x192'},
-    {name:'M4A4 | Neo-Noir',val:68,wear:'Factory New',cl:'ri-blue',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'AWP | Fever Dream',val:120,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7jEp9-k2lLi_UdvZmimcdKRMlhkGYGV2w/330x192'},
-    {name:'M4A4 | Neo-Noir FN',val:200,wear:'Factory New',cl:'ri-purple',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw/330x192'},
-    {name:'Butterfly Knife | Crimson Web',val:850,wear:'Factory New',cl:'ri-gold',img:'https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA/330x192'},
+    {name:'AK-47 | Bloodsport',val:45,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'Glock-18 | Twilight Galaxy',val:30,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/glock_fade.png'},
+    {name:'M4A4 | Neo-Noir',val:68,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'AWP | Fever Dream',val:120,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
+    {name:'M4A4 | Neo-Noir FN',val:200,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Butterfly Knife | Crimson Web',val:850,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
   ],
 };
 
@@ -536,32 +536,44 @@ const IMAGE_HASHES = {
   'skins/karambit_doppler':    '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1hLzAoNus3Fri_0VuMmrxdYSWdA1rjg7V-tA',
 };
 
+const fs_module = require('fs');
 const imgMemCache = {};
 
 app.get('/img/:type/:name', async (req, res) => {
   const key = `${req.params.type}/${req.params.name.replace('.png','')}`;
-  const hash = IMAGE_HASHES[key];
-  if (!hash) return res.status(404).send('');
+  const diskPath = path.join(__dirname, 'public', 'img', req.params.type, req.params.name.replace('.png','') + '.png');
 
-  // Memory cache
+  // 1. Serve from disk if exists
+  if (fs_module.existsSync(diskPath)) {
+    res.set('Cache-Control','public,max-age=86400');
+    return res.sendFile(diskPath);
+  }
+
+  // 2. Try memory cache
   if (imgMemCache[key]) {
     res.set('Content-Type','image/png');res.set('Cache-Control','public,max-age=86400');
     return res.send(imgMemCache[key]);
   }
 
-  // DB cache
+  // 3. Try DB cache
   try {
     const cached = await pool.query('SELECT data,content_type FROM image_cache WHERE key=$1', [key]);
-    if (cached.rows[0] && cached.rows[0].data) {
+    if (cached.rows[0]?.data) {
       const buf = Buffer.from(cached.rows[0].data);
       imgMemCache[key] = buf;
+      // Also save to disk for next time
+      fs_module.mkdirSync(path.dirname(diskPath), {recursive:true});
+      fs_module.writeFileSync(diskPath, buf);
       res.set('Content-Type', cached.rows[0].content_type||'image/png');
       res.set('Cache-Control','public,max-age=86400');
       return res.send(buf);
     }
   } catch {}
 
-  // Fetch from Steam
+  // 4. Fetch from Steam and cache
+  const hash = IMAGE_HASHES[key];
+  if (!hash) return res.status(404).send('');
+
   try {
     const url = `https://steamcommunity-a.akamaihd.net/economy/image/${hash}/200fx200f`;
     const r = await axios.get(url, {
@@ -571,6 +583,9 @@ app.get('/img/:type/:name', async (req, res) => {
     const buf = Buffer.from(r.data);
     const ct = r.headers['content-type']||'image/png';
     imgMemCache[key] = buf;
+    // Save to disk
+    fs_module.mkdirSync(path.dirname(diskPath), {recursive:true});
+    fs_module.writeFileSync(diskPath, buf);
     // Save to DB
     pool.query('INSERT INTO image_cache(key,url,data,content_type) VALUES($1,$2,$3,$4) ON CONFLICT(key) DO UPDATE SET data=EXCLUDED.data,cached_at=NOW()',
       [key, url, buf, ct]).catch(()=>{});
