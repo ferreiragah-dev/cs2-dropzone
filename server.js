@@ -28,11 +28,42 @@ app.use(session({
   cookie: { secure: isProd, sameSite: isProd ? 'none' : 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 }
 }));
 
-// ── Auth helper ───────────────────────────────────────────────────────────────
-const requireAuth = (req, res, next) => {
+// ── DB helper with fallback ────────────────────────────────────────────────────
+const memBalances = {}; // in-memory fallback when DB is unavailable
+
+async function getBalance(steamId) {
+  try {
+    const r = await pool.query('SELECT balance FROM users WHERE steam_id=$1', [steamId]);
+    return r.rows[0] ? parseFloat(r.rows[0].balance) : (memBalances[steamId] || 500);
+  } catch {
+    return memBalances[steamId] || 500;
+  }
+}
+
+async function adjustBalance(steamId, delta) {
+  try {
+    const r = await pool.query('UPDATE users SET balance=balance+$1 WHERE steam_id=$2 RETURNING balance', [delta, steamId]);
+    if (r.rows[0]) {
+      memBalances[steamId] = parseFloat(r.rows[0].balance);
+      return memBalances[steamId];
+    }
+  } catch (e) {
+    console.warn('DB balance update failed, using memory:', e.message);
+  }
+  // Memory fallback
+  memBalances[steamId] = (memBalances[steamId] || 500) + delta;
+  return memBalances[steamId];
+}
+
+async function logTransaction(steamId, type, amount, description) {
+  try {
+    await pool.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
+      [steamId, type, amount, description]);
+  } catch {} // non-critical
+}
   if (!req.session.steamId) return res.status(401).json({ error: 'Não autenticado' });
   next();
-};
+;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STEAM OPENID
@@ -143,13 +174,12 @@ app.get('/auth/steam/return', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 app.get('/api/me', async (req, res) => {
   if (!req.session.steamId) return res.json({ loggedIn: false });
-  // Always get fresh balance from DB
+  const balance = await getBalance(req.session.steamId);
+  req.session.user.balance = balance;
+  memBalances[req.session.steamId] = balance;
   try {
-    const r = await pool.query('SELECT balance, trade_link FROM users WHERE steam_id=$1', [req.session.steamId]);
-    if (r.rows[0]) {
-      req.session.user.balance = parseFloat(r.rows[0].balance);
-      req.session.user.tradeLink = r.rows[0].trade_link||'';
-    }
+    const r = await pool.query('SELECT trade_link FROM users WHERE steam_id=$1', [req.session.steamId]);
+    if (r.rows[0]) req.session.user.tradeLink = r.rows[0].trade_link||'';
   } catch {}
   res.json({ loggedIn: true, user: req.session.user });
 });
@@ -170,12 +200,10 @@ app.post('/api/tradelink', requireAuth, async (req, res) => {
 app.post('/api/deposit', requireAuth, async (req, res) => {
   const amount = parseFloat(req.body.amount);
   if (!amount || amount < 10) return res.status(400).json({ error: 'Valor mínimo R$10' });
-  await pool.query('UPDATE users SET balance=balance+$1 WHERE steam_id=$2', [amount, req.session.steamId]);
-  await pool.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
-    [req.session.steamId, 'deposit', amount, 'Depósito manual']);
-  const r = await pool.query('SELECT balance FROM users WHERE steam_id=$1', [req.session.steamId]);
-  req.session.user.balance = parseFloat(r.rows[0].balance);
-  res.json({ ok: true, balance: req.session.user.balance });
+  const newBalance = await adjustBalance(req.session.steamId, amount);
+  await logTransaction(req.session.steamId, 'deposit', amount, 'Depósito');
+  req.session.user.balance = newBalance;
+  res.json({ ok: true, balance: newBalance });
 });
 
 // ── Inventário do usuário na plataforma
@@ -232,15 +260,11 @@ app.post('/api/battles', requireAuth, async (req, res) => {
   const totalValue = cases.reduce((s,c) => s+c.price, 0) * playerCount;
   const userCost = cases.reduce((s,c) => s+c.price, 0);
 
-  // Check balance
-  const balanceRes = await pool.query('SELECT balance FROM users WHERE steam_id=$1', [req.session.steamId]);
-  const balance = parseFloat(balanceRes.rows[0]?.balance || 0);
+  const balance = await getBalance(req.session.steamId);
   if (balance < userCost) return res.status(400).json({ error: 'Saldo insuficiente' });
 
-  // Deduct balance
-  await pool.query('UPDATE users SET balance=balance-$1 WHERE steam_id=$2', [userCost, req.session.steamId]);
-  await pool.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
-    [req.session.steamId,'battle_loss',-userCost,'Entrada em batalha']);
+  const newBalance = await adjustBalance(req.session.steamId, -userCost);
+  await logTransaction(req.session.steamId, 'battle_loss', -userCost, 'Entrada em batalha');
 
   // Create battle
   const battleRes = await pool.query(
@@ -255,8 +279,8 @@ app.post('/api/battles', requireAuth, async (req, res) => {
     [battle.id, req.session.steamId, 0]
   );
 
-  req.session.user.balance = balance - userCost;
-  res.json({ ok: true, battleId: battle.id, balance: req.session.user.balance });
+  req.session.user.balance = newBalance;
+  res.json({ ok: true, battleId: battle.id, balance: newBalance });
 });
 
 // Entrar em batalha
@@ -290,14 +314,13 @@ app.post('/api/battles/:id/join', requireAuth, async (req, res) => {
     const cases = battle.cases_json;
     const userCost = cases.reduce((s,c) => s+c.price, 0);
 
-    const balRes = await client.query('SELECT balance FROM users WHERE steam_id=$1', [steamId]);
-    const balance = parseFloat(balRes.rows[0]?.balance || 0);
+    const balRes = await client.query('SELECT balance FROM users WHERE steam_id=$1 FOR UPDATE', [steamId]);
+    const balance = parseFloat(balRes.rows[0]?.balance || memBalances[steamId] || 0);
     if (balance < userCost) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Saldo insuficiente' }); }
 
     await client.query('UPDATE users SET balance=balance-$1 WHERE steam_id=$2', [userCost, steamId]);
     await client.query('INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)', [battleId, steamId, nextSlot]);
-    await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
-      [steamId,'battle_loss',-userCost,'Entrada em batalha #'+battleId]);
+    await logTransaction(steamId, 'battle_loss', -userCost, 'Entrada em batalha #'+battleId);
 
     // Check if full → start
     const newCount = usedSlots.length + 1;
@@ -306,8 +329,9 @@ app.post('/api/battles/:id/join', requireAuth, async (req, res) => {
     }
 
     await client.query('COMMIT');
-    req.session.user.balance = balance - userCost;
-    res.json({ ok: true, slot: nextSlot, balance: req.session.user.balance });
+    memBalances[steamId] = balance - userCost;
+    req.session.user.balance = memBalances[steamId];
+    res.json({ ok: true, slot: nextSlot, balance: memBalances[steamId] });
   } catch(e) {
     await client.query('ROLLBACK');
     console.error('Join battle error:', e.message);
@@ -371,14 +395,70 @@ app.post('/api/battles/:id/finish', requireAuth, async (req, res) => {
 // API — ABRIR CAIXA (solo)
 // ═══════════════════════════════════════════════════════════════════════════════
 const CASE_DROPS = {
-  'prisma':     [{name:'AK-47 | Uncharted',val:8,wear:'Field-Tested',cl:'ri-gray'},{name:'USP-S | Cortex',val:12,wear:'Minimal Wear',cl:'ri-blue'},{name:'M4A1-S | Decimator',val:18,wear:'Factory New',cl:'ri-blue'},{name:'Glock-18 | Warhawk',val:35,wear:'Factory New',cl:'ri-purple'},{name:'AK-47 | Neon Rider',val:95,wear:'Factory New',cl:'ri-purple'},{name:'M4A1-S | Nightmare',val:180,wear:'Factory New',cl:'ri-purple'}],
-  'revolution': [{name:'AK-47 | Slate',val:15,wear:'Field-Tested',cl:'ri-gray'},{name:'USP-S | Jawbreaker',val:20,wear:'Minimal Wear',cl:'ri-blue'},{name:'M4A4 | Temukau',val:45,wear:'Factory New',cl:'ri-blue'},{name:'AWP | Duality',val:90,wear:'Factory New',cl:'ri-purple'},{name:'AK-47 | Inheritance',val:210,wear:'Factory New',cl:'ri-purple'},{name:'M4A1-S | Blackwater',val:450,wear:'Factory New',cl:'ri-gold'}],
-  'dreams':     [{name:'MP9 | Starlight Protector',val:12,wear:'Field-Tested',cl:'ri-gray'},{name:'MAC-10 | Light Box',val:18,wear:'Minimal Wear',cl:'ri-blue'},{name:'P90 | Neoqueen',val:30,wear:'Factory New',cl:'ri-blue'},{name:'AK-47 | Head Shot',val:65,wear:'Factory New',cl:'ri-purple'},{name:'USP-S | The traitor',val:140,wear:'Factory New',cl:'ri-purple'},{name:'M4A1-S | Illusion',val:380,wear:'Factory New',cl:'ri-gold'}],
-  'fracture':   [{name:'PP-Bizon | Runic',val:8,wear:'Field-Tested',cl:'ri-gray'},{name:'Five-SeveN | Fairy Tale',val:14,wear:'Minimal Wear',cl:'ri-blue'},{name:'AK-47 | Legion of Anubis',val:40,wear:'Factory New',cl:'ri-blue'},{name:'M4A1-S | Printstream',val:185,wear:'Factory New',cl:'ri-purple'},{name:'Desert Eagle | Printstream',val:220,wear:'Factory New',cl:'ri-purple'},{name:'Glock-18 | Vogue',val:95,wear:'Factory New',cl:'ri-gold'}],
-  'riptide':    [{name:'Glock-18 | Winterized',val:10,wear:'Field-Tested',cl:'ri-gray'},{name:'MP9 | Hydra',val:16,wear:'Minimal Wear',cl:'ri-blue'},{name:'AK-47 | Aquamarine Revenge',val:55,wear:'Factory New',cl:'ri-blue'},{name:'AWP | Aquamarine Revenge',val:85,wear:'Factory New',cl:'ri-purple'},{name:'M4A1-S | Imminent Danger',val:130,wear:'Factory New',cl:'ri-purple'},{name:'Karambit | Doppler',val:900,wear:'Factory New',cl:'ri-gold'}],
-  'snakebite':  [{name:'CZ75-Auto | Vendetta',val:9,wear:'Field-Tested',cl:'ri-gray'},{name:'AK-47 | Slate',val:14,wear:'Minimal Wear',cl:'ri-blue'},{name:'M4A1-S | Dirt Drop',val:22,wear:'Factory New',cl:'ri-blue'},{name:'Ursus Knife | Doppler',val:180,wear:'Factory New',cl:'ri-purple'},{name:'Skeleton Knife | Safari Mesh',val:250,wear:'Factory New',cl:'ri-purple'},{name:'Talon Knife | Fade',val:700,wear:'Factory New',cl:'ri-gold'}],
-  'clutch':     [{name:'M4A4 | Neo-Noir',val:22,wear:'Field-Tested',cl:'ri-gray'},{name:'AK-47 | Neon Rider',val:85,wear:'Minimal Wear',cl:'ri-blue'},{name:'AWP | Hyper Beast',val:110,wear:'Factory New',cl:'ri-blue'},{name:'M4A1-S | Nightmare',val:175,wear:'Factory New',cl:'ri-purple'},{name:'USP-S | Caiman',val:28,wear:'Factory New',cl:'ri-purple'},{name:'Butterfly Knife | Fade',val:1200,wear:'Factory New',cl:'ri-gold'}],
-  'spectrum2':  [{name:'AK-47 | Bloodsport',val:45,wear:'Field-Tested',cl:'ri-gray'},{name:'Glock-18 | Twilight Galaxy',val:30,wear:'Minimal Wear',cl:'ri-blue'},{name:'M4A4 | Neo-Noir',val:68,wear:'Factory New',cl:'ri-blue'},{name:'AWP | Fever Dream',val:120,wear:'Factory New',cl:'ri-purple'},{name:'M4A4 | Neo-Noir FN',val:200,wear:'Factory New',cl:'ri-purple'},{name:'Butterfly Knife | Crimson Web',val:850,wear:'Factory New',cl:'ri-gold'}],
+  'prisma':     [
+    {name:'AK-47 | Uncharted',val:8,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'USP-S | Cortex',val:12,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/usps_printstream.png'},
+    {name:'M4A1-S | Decimator',val:18,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Glock-18 | Warhawk',val:35,wear:'Factory New',cl:'ri-purple',img:'/img/skins/glock_fade.png'},
+    {name:'AK-47 | Neon Rider',val:95,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
+    {name:'M4A1-S | Nightmare',val:180,wear:'Factory New',cl:'ri-gold',img:'/img/skins/m4a1s_printstream.png'},
+  ],
+  'revolution': [
+    {name:'AK-47 | Slate',val:15,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'USP-S | Jawbreaker',val:20,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/usps_printstream.png'},
+    {name:'M4A4 | Temukau',val:45,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'AWP | Duality',val:90,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
+    {name:'AK-47 | Inheritance',val:210,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
+    {name:'M4A1-S | Blackwater',val:450,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  ],
+  'dreams':     [
+    {name:'MP9 | Starlight Protector',val:12,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/p90_asiimov.png'},
+    {name:'MAC-10 | Light Box',val:18,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'P90 | Neoqueen',val:30,wear:'Factory New',cl:'ri-blue',img:'/img/skins/p90_asiimov.png'},
+    {name:'AK-47 | Head Shot',val:65,wear:'Factory New',cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
+    {name:'USP-S | The Traitor',val:140,wear:'Factory New',cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
+    {name:'M4A1-S | Illusion',val:380,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  ],
+  'fracture':   [
+    {name:'PP-Bizon | Runic',val:8,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/p90_asiimov.png'},
+    {name:'Five-SeveN | Fairy Tale',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/glock_fade.png'},
+    {name:'AK-47 | Legion of Anubis',val:40,wear:'Factory New',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'M4A1-S | Printstream',val:185,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Desert Eagle | Printstream',val:220,wear:'Factory New',cl:'ri-purple',img:'/img/skins/deagle_blaze.png'},
+    {name:'Glock-18 | Vogue',val:95,wear:'Factory New',cl:'ri-gold',img:'/img/skins/glock_fade.png'},
+  ],
+  'riptide':    [
+    {name:'Glock-18 | Winterized',val:10,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/glock_fade.png'},
+    {name:'MP9 | Hydra',val:16,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/p90_asiimov.png'},
+    {name:'AK-47 | Aquamarine Revenge',val:55,wear:'Factory New',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'AWP | Aquamarine Revenge',val:85,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
+    {name:'M4A1-S | Imminent Danger',val:130,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Karambit | Doppler',val:900,wear:'Factory New',cl:'ri-gold',img:'/img/skins/karambit_doppler.png'},
+  ],
+  'snakebite':  [
+    {name:'CZ75-Auto | Vendetta',val:9,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/glock_fade.png'},
+    {name:'AK-47 | Slate',val:14,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'M4A1-S | Dirt Drop',val:22,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Ursus Knife | Doppler',val:180,wear:'Factory New',cl:'ri-purple',img:'/img/skins/karambit_doppler.png'},
+    {name:'Skeleton Knife | Safari Mesh',val:250,wear:'Factory New',cl:'ri-purple',img:'/img/skins/butterfly_fade.png'},
+    {name:'Talon Knife | Fade',val:700,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  ],
+  'clutch':     [
+    {name:'M4A4 | Neo-Noir',val:22,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'AK-47 | Neon Rider',val:85,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/ak47_asiimov.png'},
+    {name:'AWP | Hyper Beast',val:110,wear:'Factory New',cl:'ri-blue',img:'/img/skins/awp_asiimov.png'},
+    {name:'M4A1-S | Nightmare',val:175,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'USP-S | Caiman',val:28,wear:'Factory New',cl:'ri-purple',img:'/img/skins/usps_printstream.png'},
+    {name:'Butterfly Knife | Fade',val:1200,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  ],
+  'spectrum2':  [
+    {name:'AK-47 | Bloodsport',val:45,wear:'Field-Tested',cl:'ri-gray',img:'/img/skins/ak47_bloodsport.png'},
+    {name:'Glock-18 | Twilight Galaxy',val:30,wear:'Minimal Wear',cl:'ri-blue',img:'/img/skins/glock_fade.png'},
+    {name:'M4A4 | Neo-Noir',val:68,wear:'Factory New',cl:'ri-blue',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'AWP | Fever Dream',val:120,wear:'Factory New',cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
+    {name:'M4A4 | Neo-Noir FN',val:200,wear:'Factory New',cl:'ri-purple',img:'/img/skins/m4a1s_printstream.png'},
+    {name:'Butterfly Knife | Crimson Web',val:850,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
+  ],
 };
 
 app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
@@ -387,28 +467,30 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   const price = CASES_PRICES[caseId];
   if (!price) return res.status(400).json({ error: 'Caixa inválida' });
 
-  const balRes = await pool.query('SELECT balance FROM users WHERE steam_id=$1', [req.session.steamId]);
-  const balance = parseFloat(balRes.rows[0]?.balance || 0);
+  const balance = await getBalance(req.session.steamId);
   if (balance < price) return res.status(400).json({ error: 'Saldo insuficiente' });
 
-  // Roll item (weighted)
+  // Roll item (weighted by rarity)
   const drops = CASE_DROPS[caseId] || CASE_DROPS['prisma'];
-  const weights = [40, 25, 15, 10, 7, 3]; // % por raridade
+  const weights = [40, 25, 15, 10, 7, 3];
   const roll = Math.random() * 100;
-  let acc = 0; let itemIdx = 0;
-  for (let i=0; i<weights.length; i++) { acc+=weights[i]; if(roll<acc){itemIdx=i;break;} }
-  const item = drops[Math.min(itemIdx, drops.length-1)];
+  let acc = 0, itemIdx = 0;
+  for (let i = 0; i < weights.length; i++) { acc += weights[i]; if (roll < acc) { itemIdx = i; break; } }
+  const item = drops[Math.min(itemIdx, drops.length - 1)];
 
-  await pool.query('UPDATE users SET balance=balance-$1 WHERE steam_id=$2', [price, req.session.steamId]);
-  await pool.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
-    [req.session.steamId,'case_open',-price,'Abertura de caixa: '+caseId]);
-  await pool.query('INSERT INTO inventory(steam_id,item_name,item_img,item_value,wear,source) VALUES($1,$2,$3,$4,$5,$6)',
-    [req.session.steamId, item.name, item.img||'', item.val, item.wear||'', 'case_open']);
+  const newBalance = await adjustBalance(req.session.steamId, -price);
+  await logTransaction(req.session.steamId, 'case_open', -price, `Caixa: ${caseId}`);
 
-  const newBalRes = await pool.query('SELECT balance FROM users WHERE steam_id=$1', [req.session.steamId]);
-  req.session.user.balance = parseFloat(newBalRes.rows[0].balance);
+  // Save to inventory (non-critical)
+  try {
+    await pool.query(
+      'INSERT INTO inventory(steam_id,item_name,item_img,item_value,wear,source) VALUES($1,$2,$3,$4,$5,$6)',
+      [req.session.steamId, item.name, item.img||'', item.val, item.wear||'', 'case_open']
+    );
+  } catch {}
 
-  res.json({ ok: true, item, balance: req.session.user.balance });
+  req.session.user.balance = newBalance;
+  res.json({ ok: true, item, balance: newBalance });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
