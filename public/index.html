@@ -380,7 +380,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
   <div class="logo" onclick="goHome()">DROP<span>ZONE</span></div>
   <div class="nav-links">
     <a onclick="goHome()" id="navBattles" class="active">Batalhas</a>
-    <a onclick="notifInfo('Em breve!')">Caixas</a>
+    <a onclick="showCases()" id="navCases">Abrir Caixas</a>
     <a onclick="openProfile('history')">Histórico</a>
     <a onclick="notifInfo('Em breve!')">Top Jogadores</a>
   </div>
@@ -622,6 +622,32 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
   </div>
 </div>
 
+<!-- CASES PAGE -->
+<div id="pageCases" class="page" style="max-width:1200px;padding:2rem 2rem 4rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <div style="font-family:'Orbitron',monospace;font-size:26px;font-weight:900;letter-spacing:2px;">ABRIR CAIXAS</div>
+      <div style="font-size:13px;color:var(--text-dim);margin-top:4px;">Selecione uma caixa e role para ganhar uma skin</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--gold);background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:.3rem .9rem;" id="casesBalanceDisplay">R$ 0,00</div>
+      <button class="btn-primary" onclick="openDeposit()">+ Saldo</button>
+    </div>
+  </div>
+  <div id="shopCasesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1.25rem;"></div>
+</div>
+
+<!-- CASE OPEN MODAL -->
+<div class="modal-overlay" id="caseOpenModal">
+  <div class="modal wide" style="max-width:680px;">
+    <div class="modal-header">
+      <div class="modal-title" id="caseOpenTitle">ABRINDO CAIXA</div>
+      <div class="modal-close" onclick="closeCaseOpen()">✕</div>
+    </div>
+    <div id="caseOpenBody" style="padding:2rem;display:flex;flex-direction:column;align-items:center;min-height:380px;justify-content:center;"></div>
+  </div>
+</div>
+
 <!-- DEPOSIT MODAL -->
 <div class="modal-overlay" id="depositModal">
   <div class="modal" style="max-width:400px;">
@@ -747,26 +773,30 @@ async function init(){
     if(d.loggedIn){
       user=d.user;
       tradeLink=user.tradeLink||'';
-      balance=rnd(500,3000); // demo balance
+      balance=user.balance||0;
       updateNavUser();
       updateBattlePage();
-      // show trade link modal if no link configured
+      startPolling(); // start multiplayer polling
       if(!tradeLink){
         setTimeout(()=>document.getElementById('tradeLinkModal').classList.add('open'),600);
       }
-      // show welcome if came from login
       if(new URLSearchParams(window.location.search).get('welcome')==='1'){
         showNotif('Bem-vindo, '+user.name+'! 🎮','success');
         history.replaceState(null,'','/');
       }
+    } else {
+      // Still poll for battles even when logged out
+      startPolling();
     }
     // check login error
     if(new URLSearchParams(window.location.search).get('login_error')==='1'){
       showNotif('Falha no login Steam. Tente novamente.','error');
       history.replaceState(null,'','/');
     }
-  }catch(e){console.warn('Offline/sem servidor:',e.message);}
-  initBattles();
+  }catch(e){
+    console.warn('Offline/sem servidor:',e.message);
+    initBattles();
+  }
   document.getElementById('loadingScreen').classList.add('hidden');
 }
 
@@ -819,10 +849,12 @@ document.addEventListener('click',e=>{
 // ─── LOGOUT ───────────────────────────────────────────────────────────────────
 async function doLogout(){
   closeDd();
+  if(pollInterval){clearInterval(pollInterval);pollInterval=null;}
   try{ await fetch('/api/logout',{method:'POST'}); }catch{}
   user=null;balance=0;tradeLink='';localHistory=[];
   updateNavUser();updateBattlePage();goHome();
   showNotif('Sessão encerrada.','info');
+  startPolling();
 }
 
 // ─── PROFILE ─────────────────────────────────────────────────────────────────
@@ -1045,12 +1077,17 @@ function skipTL(){
 // ─── DEPOSIT ─────────────────────────────────────────────────────────────────
 function openDeposit(){if(!user){showNotif('Faça login primeiro.','info');return;}document.getElementById('depositModal').classList.add('open');}
 function setDep(v){document.getElementById('depInput').value=v;}
-function confirmDeposit(){
+async function confirmDeposit(){
   const v=parseFloat(document.getElementById('depInput').value)||0;
   if(v<10){showNotif('Mínimo: R$ 10,00','error');return;}
-  balance+=v;updateBalance();
+  try{
+    const r=await fetch('/api/deposit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:v})});
+    const d=await r.json();
+    if(d.ok){balance=d.balance;updateBalance();}
+  }catch{ balance+=v;updateBalance(); }
   closeModal('depositModal');
   showNotif('R$ '+v.toFixed(2).replace('.',',')+'  adicionado! ✓','success');
+  const bd=document.getElementById('casesBalanceDisplay');if(bd) bd.textContent=fmt(balance);
 }
 
 // ─── PAGES ────────────────────────────────────────────────────────────────────
@@ -1329,6 +1366,222 @@ function doSpin(b){
     });
   }
   setTimeout(()=>revealRound(),300);
+}
+
+// ─── CASES SHOP ──────────────────────────────────────────────────────────────
+function showCases(){
+  if(!user){showNotif('Faça login para abrir caixas.','info');return;}
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pageCases').classList.add('active');
+  document.getElementById('statsBar').style.display='none';
+  document.querySelectorAll('.nav-links a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('navCases').classList.add('active');
+  renderShopCases();
+  const bd=document.getElementById('casesBalanceDisplay');
+  if(bd) bd.textContent=fmt(balance);
+}
+
+function renderShopCases(){
+  const grid=document.getElementById('shopCasesGrid');
+  if(!grid) return;
+  grid.innerHTML=CASES.map(c=>`
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem 1rem;text-align:center;transition:all .25s;cursor:pointer;" 
+         onmouseover="this.style.borderColor='var(--border-glow)';this.style.transform='translateY(-3px)'"
+         onmouseout="this.style.borderColor='var(--border)';this.style.transform=''"
+         onclick="openCase('${c.id}')">
+      <img src="${c.img}" style="width:120px;height:94px;object-fit:contain;margin-bottom:1rem;filter:drop-shadow(0 4px 12px rgba(0,212,255,.2));" onerror="this.style.display='none'">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${c.name}</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);margin-bottom:1rem;">${fmt(c.price)}</div>
+      <button class="btn-primary" style="width:100%;" onclick="openCase('${c.id}');event.stopPropagation()">🎁 Abrir</button>
+    </div>`).join('');
+}
+
+let caseOpenActive=false;
+async function openCase(caseId){
+  if(!user){showNotif('Faça login primeiro.','info');return;}
+  if(caseOpenActive) return;
+  caseOpenActive=true;
+
+  const c=CASES.find(x=>x.id===caseId);
+  if(!c){caseOpenActive=false;return;}
+
+  if(balance<c.price){showNotif('Saldo insuficiente!','error');caseOpenActive=false;return;}
+
+  // Show reel animation
+  const body=document.getElementById('caseOpenBody');
+  const title=document.getElementById('caseOpenTitle');
+  title.textContent='ABRINDO — '+c.name.toUpperCase();
+  document.getElementById('caseOpenModal').classList.add('open');
+
+  // Build reel
+  const reelItems=Array.from({length:40},()=>{
+    const s=rndFrom(SKINS);
+    return`<div style="flex-shrink:0;width:100px;height:90px;border-radius:8px;background:var(--bg-hover);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;">
+      <img src="${s.img}" style="width:64px;height:50px;object-fit:contain;" onerror="this.style.display='none'">
+      <div style="font-size:9px;color:var(--text-muted);text-align:center;line-height:1.1;">${s.name.split('|')[0]||s.name}</div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML=`
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">Rolando...</div>
+    <div style="width:100%;overflow:hidden;position:relative;border:1px solid var(--border);border-radius:8px;background:var(--bg-deep);height:110px;display:flex;align-items:center;">
+      <div style="position:absolute;left:0;right:0;top:0;bottom:0;background:linear-gradient(90deg,var(--bg-deep) 0%,transparent 20%,transparent 80%,var(--bg-deep) 100%);z-index:2;"></div>
+      <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--accent);box-shadow:0 0 8px var(--accent);z-index:3;transform:translateX(-50%);"></div>
+      <div id="caseReel" style="display:flex;gap:6px;padding:0 1rem;will-change:transform;">${reelItems}</div>
+    </div>`;
+
+  // Animate reel
+  const reel=document.getElementById('caseReel');
+  const itemW=106;
+  const target=-(rnd(20,30)*itemW)+rnd(-30,30);
+  reel.style.transition=`transform 3.5s cubic-bezier(0.12,0.8,0.2,1)`;
+  reel.style.transform=`translateX(${target}px)`;
+
+  // After animation, call API
+  setTimeout(async()=>{
+    try{
+      const r=await fetch('/api/cases/'+caseId+'/open',{method:'POST',headers:{'Content-Type':'application/json'}});
+      const d=await r.json();
+      if(!d.ok){showNotif(d.error||'Erro','error');closeCaseOpen();caseOpenActive=false;return;}
+      balance=d.balance;updateBalance();
+      const bd=document.getElementById('casesBalanceDisplay');if(bd) bd.textContent=fmt(balance);
+
+      const item=d.item;
+      const rarityColors={gray:'#888',blue:'#4d79ff','ri-gray':'#888','ri-blue':'#4d79ff','ri-purple':'#9B4DFF','ri-gold':'#FFD700'};
+      const rc=rarityColors[item.cl]||'#9B4DFF';
+
+      body.innerHTML=`
+        <div style="text-align:center;">
+          <div style="font-size:13px;color:var(--green);letter-spacing:2px;font-weight:700;margin-bottom:1rem;">✓ ITEM OBTIDO</div>
+          <div style="width:180px;height:160px;margin:0 auto 1rem;position:relative;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:2px solid ${rc};opacity:.4;animation:rotateSlow 4s linear infinite;"></div>
+            <img src="${item.img||'/img/skins/ak47_asiimov.png'}" style="width:150px;height:120px;object-fit:contain;animation:skinReveal .5s ease;" onerror="this.style.display='none'">
+          </div>
+          <div style="font-size:17px;font-weight:700;color:${rc};margin-bottom:4px;">${item.name}</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:.5rem;">${item.wear||''}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--gold);margin-bottom:1.5rem;">${fmt(item.val)}</div>
+          <div style="display:flex;gap:.75rem;justify-content:center;">
+            <button class="btn-primary" onclick="openCase('${caseId}')">Abrir Novamente</button>
+            <button class="btn-ghost" onclick="closeCaseOpen()">Fechar</button>
+          </div>
+        </div>`;
+      caseOpenActive=false;
+    }catch(e){showNotif('Erro ao abrir caixa','error');closeCaseOpen();caseOpenActive=false;}
+  },3700);
+}
+
+function closeCaseOpen(){
+  document.getElementById('caseOpenModal').classList.remove('open');
+  caseOpenActive=false;
+}
+
+// ─── MULTIPLAYER — polling ────────────────────────────────────────────────────
+let pollInterval=null;
+let lastBattlesHash='';
+
+async function pollBattles(){
+  try{
+    const r=await fetch('/api/battles');
+    const d=await r.json();
+    if(!d.battles) return;
+    const hash=JSON.stringify(d.battles.map(b=>({id:b.id,status:b.status,players:b.players?.length})));
+    if(hash===lastBattlesHash) return;
+    lastBattlesHash=hash;
+    // Merge server battles with local
+    battles=d.battles.map(b=>({
+      id:b.id,
+      status:b.status,
+      playerCount:b.player_count,
+      cases:b.cases_json,
+      total:parseFloat(b.total_value),
+      winnerIdx:null,
+      players:Array.from({length:b.player_count},(_,i)=>{
+        const p=(b.players||[]).find(x=>x&&x.slot_index===i);
+        if(!p||!p.steam_id) return null;
+        return{name:p.name||'Jogador',avatar:p.avatar||null,steamId:p.steam_id};
+      }),
+      fromServer:true,
+    }));
+    renderBattles();
+  }catch(e){}
+}
+
+function startPolling(){
+  if(pollInterval) clearInterval(pollInterval);
+  pollInterval=setInterval(pollBattles,3000);
+  pollBattles();
+}
+
+// ─── SAVE BATTLE RESULT TO SERVER ────────────────────────────────────────────
+async function saveBattleResult(b, playerResults){
+  if(!b.fromServer) return; // local-only battle
+  try{
+    await fetch('/api/battles/'+b.id+'/finish',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({results:playerResults})
+    });
+  }catch(e){console.warn('Could not save battle result',e);}
+}
+
+// ─── OVERRIDE confirmCreate to use API ───────────────────────────────────────
+async function confirmCreate(){
+  const keys=Object.keys(selCases);
+  if(!keys.length){showNotif('Selecione ao menos uma caixa.','error');return;}
+  const cArr=[];keys.forEach(id=>{const c=CASES.find(x=>x.id===id);for(let i=0;i<selCases[id];i++) cArr.push(c);});
+  const cost=cArr.reduce((s,c)=>s+c.price,0);
+  if(balance<cost){showNotif('Saldo insuficiente!','error');return;}
+
+  if(user){
+    try{
+      const r=await fetch('/api/battles',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({cases:cArr,playerCount:selPlayers_})});
+      const d=await r.json();
+      if(!d.ok){showNotif(d.error||'Erro ao criar batalha','error');return;}
+      balance=d.balance;updateBalance();
+      closeModal('createModal');
+      await pollBattles();
+      showNotif('Batalha criada! Aguardando jogadores… ⚔','success');
+    }catch(e){showNotif('Erro ao criar batalha','error');}
+  } else {
+    // local fallback
+    balance-=cost;updateBalance();
+    const myName='Você';
+    const players=[{name:myName,avatar:null}];
+    for(let i=1;i<selPlayers_;i++) players.push(null);
+    battles.unshift({id:++btlCounter,status:'open',playerCount:selPlayers_,players,cases:cArr,total:cost*selPlayers_,winnerIdx:null});
+    closeModal('createModal');renderBattles();
+    showNotif('Batalha criada! ⚔','success');
+  }
+}
+
+// ─── OVERRIDE joinBattle to use API ──────────────────────────────────────────
+async function joinBattle(id,e){
+  if(e) e.stopPropagation();
+  const b=battles.find(x=>x.id===id);if(!b) return;
+
+  if(user && b.fromServer){
+    try{
+      const r=await fetch('/api/battles/'+id+'/join',{method:'POST',headers:{'Content-Type':'application/json'}});
+      const d=await r.json();
+      if(!d.ok){showNotif(d.error||'Erro','error');return;}
+      balance=d.balance;updateBalance();
+      showNotif('Você entrou na batalha!','success');
+      await pollBattles();
+      const updated=battles.find(x=>x.id===id);
+      if(updated&&updated.status==='live') setTimeout(()=>viewBattle(id,null),400);
+    }catch(e){showNotif('Erro ao entrar na batalha','error');}
+  } else {
+    // local
+    const ei=b.players.findIndex(p=>!p);
+    if(ei<0){showNotif('Batalha cheia!','info');return;}
+    const cost=b.total/b.playerCount;
+    if(balance<cost){showNotif('Saldo insuficiente!','error');return;}
+    balance-=cost;updateBalance();
+    b.players[ei]={name:user?user.name:'Você',avatar:user?user.avatar:null};
+    if(b.players.every(p=>p)) b.status='live';
+    renderBattles();showNotif('Você entrou na batalha!','success');
+    if(b.status==='live') setTimeout(()=>viewBattle(id,null),400);
+  }
 }
 
 // ─── NOTIF ────────────────────────────────────────────────────────────────────
