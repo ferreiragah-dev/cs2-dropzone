@@ -210,11 +210,17 @@ app.post('/api/deposit', requireAuth, async (req, res) => {
 
 // ── Inventário do usuário na plataforma
 app.get('/api/inventory', requireAuth, async (req, res) => {
-  const r = await pool.query(
-    'SELECT * FROM inventory WHERE steam_id=$1 ORDER BY acquired_at DESC LIMIT 100',
-    [req.session.steamId]
-  );
-  res.json({ items: r.rows });
+  try {
+    const r = await pool.query(
+      `SELECT id, item_name, item_img, item_value, rarity_color, wear, tradable, source,
+              acquired_at
+       FROM inventory WHERE steam_id=$1 ORDER BY acquired_at DESC LIMIT 200`,
+      [req.session.steamId]
+    );
+    res.json({ items: r.rows });
+  } catch(e) {
+    res.json({ items: [] });
+  }
 });
 
 // ── Histórico
@@ -501,11 +507,13 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   const newBalance = await adjustBalance(req.session.steamId, -price);
   await logTransaction(req.session.steamId, 'case_open', -price, `Caixa: ${caseId}`);
 
-  // Save to inventory (non-critical)
+  const RARITY_COLORS = {'ri-gray':'#888888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'};
+  const rarityColor = RARITY_COLORS[item.cl] || '#4D79FF';
+
   try {
     await pool.query(
-      'INSERT INTO inventory(steam_id,item_name,item_img,item_value,wear,source) VALUES($1,$2,$3,$4,$5,$6)',
-      [req.session.steamId, item.name, item.img||'', item.val, item.wear||'', 'case_open']
+      'INSERT INTO inventory(steam_id,item_name,item_img,item_value,rarity_color,wear,source) VALUES($1,$2,$3,$4,$5,$6,$7)',
+      [req.session.steamId, item.name, item.img||'', item.val, rarityColor, item.wear||'', 'case_open']
     );
   } catch {}
 

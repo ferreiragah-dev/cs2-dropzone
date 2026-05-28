@@ -408,6 +408,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
             <div class="dd-steamid" id="ddSteamId">–</div>
           </div>
           <div class="dd-item" onclick="openProfile();closeDd()"><span class="ddi">👤</span> Minha Conta</div>
+          <div class="dd-item" onclick="openProfile('myitems');closeDd()"><span class="ddi">🎁</span> Meus Itens</div>
           <div class="dd-item" onclick="openProfile('inventory');closeDd()"><span class="ddi">🎒</span> Inventário CS2</div>
           <div class="dd-item" onclick="openProfile('history');closeDd()"><span class="ddi">📋</span> Histórico</div>
           <div class="dd-item" onclick="openProfile('settings');closeDd()"><span class="ddi">⚙️</span> Configurações</div>
@@ -463,6 +464,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
   <div id="profileStats" class="profile-stats-row"></div>
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('overview',this)">Visão Geral</button>
+    <button class="tab-btn" onclick="switchTab('myitems',this)">🎁 Meus Itens</button>
     <button class="tab-btn" onclick="switchTab('inventory',this)">Inventário CS2</button>
     <button class="tab-btn" onclick="switchTab('history',this)">Histórico</button>
     <button class="tab-btn" onclick="switchTab('settings',this)">Configurações</button>
@@ -491,6 +493,16 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.95);backdrop-filt
     <div class="settings-section">
       <div class="settings-title">Atividade na Plataforma</div>
       <div id="recentActivityEl"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-myitems">
+    <div class="settings-section">
+      <div class="settings-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>🎁 Itens Ganhos na Plataforma</span>
+        <span id="myItemsCount" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);"></span>
+      </div>
+      <div id="myItemsGrid" class="inv-grid"></div>
     </div>
   </div>
 
@@ -890,6 +902,8 @@ function openProfile(tab='overview'){
   const btn=document.querySelector(`.tab-btn[onclick="switchTab('${tab}',this)"]`);
   if(btn){btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');}
   else{document.querySelector('.tab-btn').classList.add('active');document.getElementById('tab-overview').classList.add('active');}
+  // If opening myitems tab, load from DB
+  if(tab==='myitems') loadMyItems();
 }
 
 function switchTab(name,el){
@@ -897,6 +911,7 @@ function switchTab(name,el){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
+  if(name==='myitems') loadMyItems();
 }
 
 function renderProfileAll(){
@@ -941,6 +956,7 @@ function renderProfileAll(){
   renderSettingsTab();
   renderRecentGames();
   renderRecentActivity();
+  loadMyItems();
   document.getElementById('sessionInfoEl').textContent='Sessão iniciada hoje · '+new Date().toLocaleString('pt-BR');
 }
 
@@ -968,30 +984,84 @@ function renderTradeLinkUI(){
   }
 }
 
+// ─── Meus Itens (ganhos na plataforma) ───────────────────────────────────────
+let myPlatformItems = [];
+
+async function loadMyItems(){
+  try{
+    const r = await fetch('/api/inventory');
+    const d = await r.json();
+    if(d.items) myPlatformItems = d.items;
+  }catch(e){ console.warn('loadMyItems error:', e); }
+  renderMyItemsTab();
+}
+
+function renderMyItemsTab(){
+  const grid = document.getElementById('myItemsGrid');
+  const count = document.getElementById('myItemsCount');
+  if(!grid) return;
+
+  if(!myPlatformItems.length){
+    grid.innerHTML=`<div class="inv-empty" style="text-align:center;padding:2rem;color:var(--text-dim);">
+      <div style="font-size:40px;margin-bottom:.75rem;">🎁</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:.5rem;">Nenhum item ainda</div>
+      <div style="font-size:12px;">Abra caixas ou vença batalhas para ganhar itens!</div>
+      <button class="btn-primary" style="margin-top:1rem;" onclick="showCases()">Abrir Caixas</button>
+    </div>`;
+    if(count) count.textContent = '';
+    return;
+  }
+
+  if(count) count.textContent = `${myPlatformItems.length} ${myPlatformItems.length===1?'item':'itens'}`;
+
+  // Sort by value desc
+  const sorted = [...myPlatformItems].sort((a,b) => parseFloat(b.item_value||0) - parseFloat(a.item_value||0));
+
+  const RARITY_COLORS = {'ri-gold':'#FFD700','ri-purple':'#9B4DFF','ri-blue':'#4D79FF','ri-gray':'#888'};
+
+  grid.innerHTML = sorted.map(item => {
+    const val = parseFloat(item.item_value||0);
+    const imgSrc = item.item_img || getSkinImg({name:item.item_name, cl:'ri-blue'});
+    const rColor = item.rarity_color || '#4D79FF';
+    const src = imgSrc.startsWith('http') ? imgSrc : imgSrc;
+    const fallback = '/img/skins/ak47_bloodsport.png';
+    const sourceIcon = item.source === 'battle' ? '⚔' : '🎁';
+    const sourceLabel = item.source === 'battle' ? 'Batalha' : 'Caixa';
+
+    return`<div class="inv-item" style="border-bottom:3px solid ${rColor};" title="${item.item_name}">
+      <div style="position:absolute;top:4px;right:5px;font-size:9px;background:var(--bg-deep);border-radius:3px;padding:1px 4px;color:var(--text-dim);">${sourceIcon} ${sourceLabel}</div>
+      <img class="inv-item-img" src="${src}" alt="${item.item_name}"
+           onerror="if(this.src!=='${fallback}')this.src='${fallback}'"
+           style="width:80px;height:62px;object-fit:contain;margin:0 auto 4px;display:block;">
+      <div class="inv-item-name" style="font-size:10px;font-weight:600;color:var(--text);line-height:1.2;text-align:center;">${item.item_name}</div>
+      <div style="font-size:9px;color:var(--text-dim);text-align:center;margin-top:1px;">${item.wear||''}</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);text-align:center;margin-top:4px;">${fmt(val)}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderInventoryTab(){
   const grid=document.getElementById('invGrid');
   if(!grid) return;
-  const inv=user.inventory||[];
+  const inv=user.steamInventory||[];
   if(!inv.length){
-    grid.innerHTML=`<div class="inv-empty">
+    grid.innerHTML=`<div class="inv-empty" style="text-align:center;padding:2rem;color:var(--text-dim);">
       <div style="font-size:32px;margin-bottom:.5rem;">🔒</div>
-      <div style="margin-bottom:.5rem;">Inventário privado ou vazio</div>
-      <div style="font-size:12px;color:var(--text-dim);">Torne seu inventário público nas configurações da Steam<br>e clique em Atualizar.</div>
+      <div style="margin-bottom:.5rem;">Inventário Steam privado ou vazio</div>
+      <div style="font-size:12px;color:var(--text-dim);">Torne seu inventário público nas configurações da Steam.</div>
       <button class="btn-ghost" style="margin-top:1rem;" onclick="refreshInventory()">↻ Tentar Atualizar</button>
     </div>`;
     return;
   }
   grid.innerHTML=inv.map(item=>{
     const imgHTML=item.iconUrl
-      ?`<img class="inv-item-img" src="${item.iconUrl}" alt="${item.name}" onerror="this.style.display='none'">`
-      :`<div class="inv-item-emoji">🔫</div>`;
-    const rarityBorder=item.rarityColor?`border-bottom-color:${item.rarityColor};`:'';
-    const notTradable=!item.tradable?`<span class="inv-not-tradable">BLOQ</span>`:'';
+      ?`<img class="inv-item-img" src="${item.iconUrl}" style="width:80px;height:62px;object-fit:contain;margin:0 auto 4px;display:block;" onerror="this.style.opacity='.3'">`
+      :`<div style="font-size:32px;text-align:center;">🔫</div>`;
+    const rarityBorder=item.rarityColor?`border-bottom:3px solid ${item.rarityColor};`:'';
     return`<div class="inv-item" style="${rarityBorder}" title="${item.name}">
-      ${notTradable}
       ${imgHTML}
-      <div class="inv-item-name">${item.name}</div>
-      <div class="inv-item-type">${item.type||item.weapon||''}</div>
+      <div class="inv-item-name" style="font-size:10px;font-weight:600;text-align:center;line-height:1.2;">${item.name}</div>
+      <div class="inv-item-type" style="font-size:9px;text-align:center;">${item.exterior||item.type||''}</div>
     </div>`;
   }).join('');
 }
@@ -1320,12 +1390,48 @@ function doSpin(b){
       if(footer) footer.innerHTML=`<div class="win-banner show"><div class="win-title">🏆 ${wn} VENCEU!</div><div class="win-sub">Ganhou ${fmt(b.total)}</div></div>`;
 
       const myName=user?user.name:'Você';
+      // Build results for API
+      const playerResults = filledIdxs.map(pi => ({
+        steamId: b.players[pi]?.steamId || null,
+        skins: [], // skins revealed during battle (tracked per round)
+        totalWon: playerTotals[pi]||0,
+      }));
+
       if(b.players[winnerIdx]?.name===myName){
-        balance+=b.total;updateBalance();
+        // Call finish API to credit balance and save items
+        if(b.fromServer && user){
+          fetch('/api/battles/'+b.id+'/finish',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({results: playerResults})
+          }).then(r=>r.json()).then(d=>{
+            // Refresh balance from server
+            return fetch('/api/me');
+          }).then(r=>r.json()).then(d=>{
+            if(d.loggedIn){ balance=d.user.balance; updateBalance(); }
+          }).catch(()=>{ balance+=b.total; updateBalance(); });
+        } else {
+          balance+=b.total; updateBalance();
+        }
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:b.total,date:new Date().toLocaleDateString('pt-BR')});
         showNotif(`🏆 Você ganhou ${fmt(b.total)}!`,'success');
+        setTimeout(()=>loadMyItems(), 1500);
       } else if(b.players.some(p=>p&&p.name===myName)){
+        // Finish API even for losers (to record result)
+        if(b.fromServer && user){
+          fetch('/api/battles/'+b.id+'/finish',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({results: playerResults})
+          }).then(()=>fetch('/api/me')).then(r=>r.json()).then(d=>{
+            if(d.loggedIn){ balance=d.user.balance; updateBalance(); }
+          }).catch(()=>{});
+        }
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'L',bet:b.total/b.playerCount,prize:0,date:new Date().toLocaleDateString('pt-BR')});
+      } else if(b.fromServer) {
+        // Spectator — just finish
+        fetch('/api/battles/'+b.id+'/finish',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({results: playerResults})
+        }).catch(()=>{});
       }
       renderBattles();
       return;
@@ -1439,6 +1545,8 @@ async function openCase(caseId){
     winItem=d.item;
     balance=d.balance;updateBalance();
     const bd=document.getElementById('casesBalanceDisplay');if(bd) bd.textContent=fmt(balance);
+    // Refresh platform items
+    loadMyItems();
   }catch(e){showNotif('Erro ao abrir caixa','error');closeCaseOpen();caseOpenActive=false;return;}
 
   // Build reel: 35 random items + winning item near center at position 30
