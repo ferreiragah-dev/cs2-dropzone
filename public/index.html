@@ -1143,7 +1143,7 @@ function cardHTML(b){
   const sl={open:'Aberta',live:'Ao Vivo',done:'Encerrada'};
   const ph=b.players.map((p,i)=>pSlotHTML(p,i,b));
   const vs=[];ph.forEach((h,i)=>{vs.push(h);if(i<ph.length-1) vs.push(`<div class="vs-badge">VS</div>`);});
-  const ch=b.cases.map(c=>`<div class="case-chip"><img src="${c.img}" style="width:20px;height:20px;object-fit:contain;border-radius:3px;">${c.name.split(' ')[0]}</div>`).join('');
+  const ch=b.cases.map(c=>`<div class="case-chip">${c.img?`<img src="${c.img}" style="width:20px;height:20px;object-fit:contain;border-radius:3px;" onerror="this.style.display='none'">`:''}${(c.name||'Case').split(' ')[0]}</div>`).join('');
   const btn=b.status==='open'
     ?`<button class="btn-join" onclick="requireAuth(()=>joinBattle(${b.id},event))">Entrar</button>`
     :b.status==='live'
@@ -1201,40 +1201,8 @@ function updateChosen(){
   const list=document.getElementById('chosenList');const tot=document.getElementById('chosenTotal');
   if(!keys.length){list.innerHTML='<span style="font-size:12px;color:var(--text-dim)">Nenhuma caixa</span>';tot.textContent='R$ 0,00';return;}
   let sum=0;
-  list.innerHTML=keys.map(id=>{const c=CASES.find(x=>x.id===id);const q=selCases[id];sum+=c.price*q;return`<div class="chosen-pill">${c.emoji} ${c.name.split(' ')[0]} ×${q}</div>`;}).join('');
+  list.innerHTML=keys.map(id=>{const c=CASES.find(x=>x.id===id);const q=selCases[id];sum+=c.price*q;return`<div class="chosen-pill">${c.name.split(' ')[0]} ×${q}</div>`;}).join('');
   tot.textContent=fmt(sum);
-}
-
-function confirmCreate(){
-  const keys=Object.keys(selCases);
-  if(!keys.length){showNotif('Selecione ao menos uma caixa.','error');return;}
-  const cArr=[];keys.forEach(id=>{const c=CASES.find(x=>x.id===id);for(let i=0;i<selCases[id];i++) cArr.push(c);});
-  const cost=cArr.reduce((s,c)=>s+c.price,0);
-  if(balance<cost){showNotif('Saldo insuficiente!','error');return;}
-  balance-=cost;updateBalance();
-  const myName=user?user.name:'Você';
-  const myAvt=user?user.avatar:null;
-  const players=[{name:myName,avatar:myAvt}];
-  for(let i=1;i<selPlayers_;i++) players.push(null);
-  battles.unshift({id:++btlCounter,status:'open',playerCount:selPlayers_,players,cases:cArr,total:cost*selPlayers_,winnerIdx:null});
-  closeModal('createModal');renderBattles();
-  showNotif('Batalha criada! Aguardando jogadores… ⚔','success');
-}
-
-// JOIN
-function joinBattle(id,e){
-  if(e) e.stopPropagation();
-  const b=battles.find(x=>x.id===id);if(!b) return;
-  const ei=b.players.findIndex(p=>!p);
-  if(ei<0){showNotif('Batalha cheia!','info');return;}
-  const cost=b.total/b.playerCount;
-  if(balance<cost){showNotif('Saldo insuficiente!','error');return;}
-  balance-=cost;updateBalance();
-  const myName=user?user.name:'Você';
-  b.players[ei]={name:myName,avatar:user?user.avatar:null};
-  if(b.players.every(p=>p)) b.status='live';
-  renderBattles();showNotif('Você entrou na batalha!','success');
-  if(b.status==='live') setTimeout(()=>viewBattle(id,null),400);
 }
 
 // VIEW / SPIN
@@ -1479,15 +1447,17 @@ function closeCaseOpen(){
 let pollInterval=null;
 let lastBattlesHash='';
 
+let pollFailed = 0;
 async function pollBattles(){
   try{
     const r=await fetch('/api/battles');
+    if(!r.ok) throw new Error('HTTP '+r.status);
     const d=await r.json();
     if(!d.battles) return;
-    const hash=JSON.stringify(d.battles.map(b=>({id:b.id,status:b.status,players:b.players?.length})));
+    pollFailed = 0;
+    const hash=JSON.stringify(d.battles.map(b=>({id:b.id,status:b.status,pc:b.player_count})));
     if(hash===lastBattlesHash) return;
     lastBattlesHash=hash;
-    // Merge server battles with local
     battles=d.battles.map(b=>({
       id:b.id,
       status:b.status,
@@ -1502,8 +1472,21 @@ async function pollBattles(){
       }),
       fromServer:true,
     }));
+    // If server returns empty, add demo battles
+    if(battles.length===0) addDemoBattles();
     renderBattles();
-  }catch(e){}
+  }catch(e){
+    pollFailed++;
+    // After 2 failed polls, show demo battles
+    if(pollFailed===2 && battles.length===0) {
+      initBattles();
+    }
+  }
+}
+
+function addDemoBattles(){
+  if(battles.length > 0) return;
+  initBattles();
 }
 
 function startPolling(){
