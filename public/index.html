@@ -825,6 +825,7 @@ let selCases={};
 let selPlayers_=2;
 let selBotMode=false;
 let spinActive=false;
+let currentBattleId=null;
 let currentFilter='all';
 let btlCounter=1000;
 let localHistory=[];
@@ -1351,13 +1352,14 @@ function updateChosen(){
 function viewBattle(id,e){
   if(e) e.stopPropagation();
   const b=battles.find(x=>x.id===id);if(!b) return;
+  currentBattleId=id;
   document.getElementById('battleModalTitle').textContent='BATALHA #'+b.id;
   document.getElementById('battleArena').innerHTML=buildArena(b);
   document.getElementById('battleModal').classList.add('open');
-  if(b.status==='live') setTimeout(()=>doSpin(b),300);
+  if(b.status==='live'||(b.status==='done'&&b.fromServer)) setTimeout(()=>doSpin(b),300);
 }
 
-function closeBattle(){spinActive=false;closeModal('battleModal');}
+function closeBattle(){spinActive=false;currentBattleId=null;closeModal('battleModal');}
 
 function buildArena(b){
   const myName = user?.name||'Você';
@@ -1424,8 +1426,17 @@ function buildArena(b){
     </div>`;
   }).join('');
 
-  const spinBtn=b.status==='live'
+  const isCreator=user&&b.createdBy===user.steamId;
+  const hasEmptySlot=b.players.some(p=>!p);
+  let spinBtn=b.status==='live'
     ?`<button class="btn-spin" id="sb_${b.id}" onclick="doSpin_id(${b.id})">▶ ABRIR CAIXAS</button>`:'';
+
+  if(b.status==='open'){
+    spinBtn=`<div style="text-align:center;">
+      <div style="font-size:12px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:.5rem;">Aguardando jogadores</div>
+      ${isCreator&&hasEmptySlot?`<button class="btn-primary" onclick="addBotToBattle(${b.id})">Adicionar Bot</button>`:''}
+    </div>`;
+  }
 
   return`<div class="hc-battle">
     <div class="hc-topbar">${caseChips}<span class="hc-round-info" id="hcround_${b.id}">RODADA 1 / ${b.cases.length}</span></div>
@@ -1437,7 +1448,8 @@ function buildArena(b){
 
 function doSpin_id(id){doSpin(battles.find(x=>x.id===id));}
 
-function doSpin(b){
+async function doSpin(b){
+  if(spinActive) return;
   const btn=document.getElementById('sb_'+b.id);
   if(btn) btn.disabled=true;
   spinActive=true;
@@ -1450,6 +1462,15 @@ function doSpin(b){
   const WEARS=['FN','MW','FT','WW','BS'];
   const WEARS_FULL=['Factory New','Minimal Wear','Field-Tested','Well-Worn','Battle-Scarred'];
   const myName=user?user.name:'Você';
+  let serverResults=null;
+  if(b.fromServer){
+    try{
+      const {ok,data:d}=await fetchJSON('/api/battles/'+b.id+'/result',{method:'POST',headers:{'Content-Type':'application/json'}},10000);
+      if(!ok||!d.ok){showNotif(d.error||'Erro ao gerar resultado','error');spinActive=false;if(btn) btn.disabled=false;return;}
+      serverResults=d.results||[];
+      b.winnerSteamId=d.winnerSteamId;
+    }catch(e){showNotif('Erro ao sincronizar batalha','error');spinActive=false;if(btn) btn.disabled=false;return;}
+  }
 
   function addSkinCard(pi, skin, val, wear){
     const row=document.getElementById('hcskinsrow_'+b.id+'_'+pi);
@@ -1524,17 +1545,14 @@ function doSpin(b){
 
       if(iWon){
         if(b.fromServer&&user){
-          fetch('/api/battles/'+b.id+'/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:playerResults})})
-          .then(()=>fetch('/api/me')).then(r=>r.json()).then(d=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}})
-          .catch(()=>{balance+=totalPrize;updateBalance();});
+          fetchJSON('/api/me',{},5000).then(({data:d})=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}}).catch(()=>{});
         } else { balance+=totalPrize; updateBalance(); }
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'W',bet:b.total/b.playerCount,prize:totalPrize,date:new Date().toLocaleDateString('pt-BR')});
         showNotif(`🏆 Você ganhou ${fmt(totalPrize)}!`,'success');
         setTimeout(()=>loadMyItems(),1500);
       } else if(b.players.some(p=>p&&(user&&p.steamId?p.steamId===user.steamId:p.name===myName))){
         if(b.fromServer&&user){
-          fetch('/api/battles/'+b.id+'/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:playerResults})})
-          .then(()=>fetch('/api/me')).then(r=>r.json()).then(d=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}}).catch(()=>{});
+          fetchJSON('/api/me',{},5000).then(({data:d})=>{if(d.loggedIn){balance=d.user.balance;updateBalance();}}).catch(()=>{});
         }
         localHistory.unshift({id:b.id,type:b.playerCount+'v'+b.playerCount,result:'L',bet:b.total/b.playerCount,prize:0,date:new Date().toLocaleDateString('pt-BR')});
       }
@@ -1550,9 +1568,12 @@ function doSpin(b){
     // Reveal each player with stagger
     filledIdxs.forEach((pi,ri)=>{
       setTimeout(()=>{
-        const skin=rndFrom(SKINS);
-        const val=skin.val*(0.4+Math.random()*2.2);
-        const wear=rndFrom(WEARS);
+        const serverPlayer=serverResults&&serverResults.find(r=>r.steamId===b.players[pi]?.steamId);
+        const serverSkin=serverPlayer?.skins?.[round];
+        const localSkin=rndFrom(SKINS);
+        const skin=serverSkin?{name:serverSkin.name,img:serverSkin.img,cl:serverSkin.cl||'ri-blue'}:localSkin;
+        const val=serverSkin?parseFloat(serverSkin.val||0):localSkin.val*(0.4+Math.random()*2.2);
+        const wear=serverSkin?(serverSkin.wear||''):rndFrom(WEARS);
         playerTotals[pi]+=val;
         playerSkins[pi].push({skin,val,wear});
 
@@ -1769,6 +1790,7 @@ async function pollBattles(){
       id:b.id,
       status:b.status,
       pc:b.player_count,
+      winner:b.winner_steam_id||'',
       players:(b.players||[]).map(p=>p&&p.steam_id?p.steam_id:null).join(',')
     })));
     if(hash===lastBattlesHash) return;
@@ -1784,16 +1806,29 @@ async function pollBattles(){
       }),
       total:parseFloat(b.total_value),
       winnerIdx:null,
+      winnerSteamId:b.winner_steam_id||null,
+      createdBy:b.created_by||null,
       players:Array.from({length:b.player_count},(_,i)=>{
         const p=(b.players||[]).find(x=>x&&x.slot_index===i);
         if(!p||!p.steam_id) return null;
-        return{name:p.name||'Jogador',avatar:p.avatar||null,steamId:p.steam_id};
+        return{name:p.name||'Jogador',avatar:p.avatar||null,steamId:p.steam_id,skins:p.skins_json||[],totalWon:parseFloat(p.total_won||0)};
       }),
       fromServer:true,
     }));
+    battles.forEach(b=>{
+      if(b.winnerSteamId) b.winnerIdx=b.players.findIndex(p=>p&&p.steamId===b.winnerSteamId);
+    });
     // If server returns empty, add demo battles
     if(battles.length===0) addDemoBattles();
     renderBattles();
+    const modal=document.getElementById('battleModal');
+    if(currentBattleId&&modal&&modal.classList.contains('open')&&!spinActive){
+      const current=battles.find(x=>x.id===currentBattleId);
+      if(current){
+        document.getElementById('battleArena').innerHTML=buildArena(current);
+        if(current.status==='live') setTimeout(()=>doSpin(current),300);
+      }
+    }
   }catch(e){
     pollFailed++;
     // After 2 failed polls, show demo battles
@@ -1847,6 +1882,7 @@ async function confirmCreate(){
         setTimeout(()=>viewBattle(d.battleId,null),300);
       } else {
         showNotif('Batalha criada! Aguardando jogadores… ⚔','success');
+        setTimeout(()=>viewBattle(d.battleId,null),300);
       }
     }catch(e){showNotif('Erro ao criar batalha: '+(e.message||'verifique sua conexão'),'error');}
   } else {
@@ -1895,6 +1931,22 @@ async function joinBattle(id,e){
     renderBattles();showNotif('Você entrou na batalha!','success');
     if(b.status==='live') setTimeout(()=>viewBattle(id,null),400);
   }
+}
+
+async function addBotToBattle(id){
+  if(!user){showNotif('Faça login com a Steam primeiro.','info');return;}
+  try{
+    const {ok,data:d}=await fetchJSON('/api/battles/'+id+'/add-bot',{method:'POST',headers:{'Content-Type':'application/json'}},8000);
+    if(!ok||!d.ok){showNotif(d.error||'Erro ao adicionar bot','error');return;}
+    showNotif('BOT DA CASA entrou na batalha!','success');
+    lastBattlesHash='';
+    await pollBattles();
+    const updated=battles.find(x=>x.id===id);
+    if(updated){
+      document.getElementById('battleArena').innerHTML=buildArena(updated);
+      if(updated.status==='live') setTimeout(()=>doSpin(updated),400);
+    }
+  }catch(e){showNotif('Erro ao adicionar bot: '+(e.message||'verifique sua conexão'),'error');}
 }
 
 // ─── NOTIF ────────────────────────────────────────────────────────────────────

@@ -386,6 +386,7 @@ app.get('/api/battles', async (req, res) => {
       json_agg(json_build_object(
         'steam_id', bp.steam_id, 'slot_index', bp.slot_index,
         'total_won', bp.total_won,
+        'skins_json', bp.skins_json,
         'name', u.name, 'avatar', u.avatar
       ) ORDER BY bp.slot_index) as players
     FROM battles b
@@ -510,6 +511,57 @@ app.post('/api/battles/:id/join', requireAuth, async (req, res) => {
   } finally { client.release(); }
 });
 
+app.post('/api/battles/:id/add-bot', requireAuth, async (req, res) => {
+  const battleId = parseInt(req.params.id);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await ensureHouseBot(client);
+
+    const battleRes = await client.query('SELECT * FROM battles WHERE id=$1 FOR UPDATE', [battleId]);
+    const battle = battleRes.rows[0];
+    if (!battle || battle.status !== 'open') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Batalha não disponível' });
+    }
+    if (battle.created_by !== req.session.steamId) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Apenas o criador pode adicionar bot' });
+    }
+
+    const alreadyBot = await client.query('SELECT 1 FROM battle_players WHERE battle_id=$1 AND steam_id=$2', [battleId, HOUSE_BOT.steamId]);
+    if (alreadyBot.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Bot já está nesta batalha' });
+    }
+
+    const slots = await client.query('SELECT slot_index FROM battle_players WHERE battle_id=$1', [battleId]);
+    const usedSlots = slots.rows.map(r => r.slot_index);
+    let nextSlot = -1;
+    for (let i = 0; i < battle.player_count; i++) { if (!usedSlots.includes(i)) { nextSlot = i; break; } }
+    if (nextSlot < 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Batalha cheia' });
+    }
+
+    await client.query('INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)', [battleId, HOUSE_BOT.steamId, nextSlot]);
+
+    const newCount = usedSlots.length + 1;
+    if (newCount >= battle.player_count) {
+      await client.query("UPDATE battles SET status='live' WHERE id=$1", [battleId]);
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true, slot: nextSlot, status: newCount >= battle.player_count ? 'live' : 'open' });
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('Add bot error:', e.message);
+    res.status(500).json({ error: 'Erro ao adicionar bot: '+e.message });
+  } finally {
+    client.release();
+  }
+});
+
 // Finalizar batalha (salvar resultado)
 app.post('/api/battles/:id/finish', requireAuth, async (req, res) => {
   const battleId = parseInt(req.params.id);
@@ -632,6 +684,116 @@ const CASE_DROPS = {
     {name:'Butterfly Knife | Crimson Web',val:850,wear:'Factory New',cl:'ri-gold',img:'/img/skins/butterfly_fade.png'},
   ],
 };
+
+function rollBattleSkin(caseId) {
+  const drops = CASE_DROPS[caseId] || CASE_DROPS.prisma;
+  const roll = Math.random() * 100;
+  let rarity;
+  if      (roll < 40) rarity = 'ri-gray';
+  else if (roll < 65) rarity = 'ri-blue';
+  else if (roll < 85) rarity = 'ri-purple';
+  else                rarity = 'ri-gold';
+  const pool = drops.filter(d => d.cl === rarity);
+  const base = (pool.length ? pool : drops)[Math.floor(Math.random() * (pool.length ? pool : drops).length)];
+  const multiplier = 0.75 + Math.random() * 0.9;
+  return {
+    name: base.name,
+    img: base.img || '',
+    val: Math.max(0.01, Math.round(base.val * multiplier * 100) / 100),
+    wear: base.wear || '',
+    cl: base.cl || 'ri-blue',
+  };
+}
+
+async function fetchBattleResultRows(client, battleId) {
+  const r = await client.query(
+    `SELECT bp.steam_id, bp.slot_index, bp.skins_json, bp.total_won, u.name, u.avatar
+     FROM battle_players bp
+     LEFT JOIN users u ON u.steam_id=bp.steam_id
+     WHERE bp.battle_id=$1
+     ORDER BY bp.slot_index`,
+    [battleId]
+  );
+  return r.rows.map(row => ({
+    steamId: row.steam_id,
+    slotIndex: row.slot_index,
+    name: row.name || 'Jogador',
+    avatar: row.avatar || null,
+    skins: row.skins_json || [],
+    totalWon: parseFloat(row.total_won || 0),
+  }));
+}
+
+app.post('/api/battles/:id/result', requireAuth, async (req, res) => {
+  const battleId = parseInt(req.params.id);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const battleRes = await client.query('SELECT * FROM battles WHERE id=$1 FOR UPDATE', [battleId]);
+    const battle = battleRes.rows[0];
+    if (!battle) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Batalha não encontrada' });
+    }
+    if (battle.status === 'open') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Aguardando jogadores' });
+    }
+    if (battle.status === 'done') {
+      const results = await fetchBattleResultRows(client, battleId);
+      await client.query('COMMIT');
+      return res.json({ ok: true, winnerSteamId: battle.winner_steam_id, results, alreadyDone: true });
+    }
+
+    const players = await fetchBattleResultRows(client, battleId);
+    if (players.length < battle.player_count) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Aguardando jogadores' });
+    }
+
+    const cases = battle.cases_json || [];
+    const results = players.map(p => {
+      const skins = cases.map(c => rollBattleSkin(c.id || c.name || 'prisma'));
+      const totalWon = skins.reduce((s, skin) => s + parseFloat(skin.val || 0), 0);
+      return { ...p, skins, totalWon: Math.round(totalWon * 100) / 100 };
+    });
+
+    let winner = results[0];
+    results.forEach(r => { if (r.totalWon > winner.totalWon) winner = r; });
+    const prizeTotal = Math.round(results.reduce((s, r) => s + r.totalWon, 0) * 100) / 100;
+
+    await client.query(
+      "UPDATE battles SET status='done', winner_steam_id=$1, finished_at=NOW() WHERE id=$2",
+      [winner.steamId, battleId]
+    );
+
+    for (const r of results) {
+      await client.query(
+        'UPDATE battle_players SET skins_json=$1, total_won=$2 WHERE battle_id=$3 AND steam_id=$4',
+        [JSON.stringify(r.skins), r.totalWon, battleId, r.steamId]
+      );
+    }
+
+    if (winner.steamId !== HOUSE_BOT.steamId) {
+      for (const skin of results.flatMap(r => r.skins || [])) {
+        await addInventoryItem(winner.steamId, skin, 'battle', client);
+      }
+      await client.query('UPDATE users SET balance=balance+$1 WHERE steam_id=$2', [prizeTotal, winner.steamId]);
+      await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
+        [winner.steamId, 'battle_win', prizeTotal, 'Vitória na batalha #'+battleId]);
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true, winnerSteamId: winner.steamId, results, prizeTotal });
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('Battle result error:', e.message);
+    res.status(500).json({ error: 'Erro ao gerar resultado: '+e.message });
+  } finally {
+    client.release();
+  }
+});
 
 app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   const caseId = req.params.caseId;
