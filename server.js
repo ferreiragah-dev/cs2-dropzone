@@ -30,6 +30,43 @@ app.use(session({
 
 // ── DB helper with fallback ────────────────────────────────────────────────────
 const memBalances = {}; // in-memory fallback when DB is unavailable
+const memInventory = {}; // platform inventory fallback when DB writes are unavailable
+
+const RARITY_COLORS = {'ri-gray':'#888888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'};
+
+function normalizeInventoryItem(steamId, item, source = 'battle') {
+  return {
+    id: Date.now() + Math.floor(Math.random() * 100000),
+    steam_id: steamId,
+    item_name: item.item_name || item.name || 'Item',
+    item_img: item.item_img || item.img || '',
+    item_value: parseFloat(item.item_value ?? item.val ?? 0),
+    rarity_color: item.rarity_color || RARITY_COLORS[item.cl] || '#888888',
+    wear: item.wear || '',
+    tradable: item.tradable !== false,
+    source,
+    acquired_at: new Date().toISOString(),
+  };
+}
+
+async function addInventoryItem(steamId, item, source = 'battle', client = pool) {
+  if (!steamId) return null;
+  const invItem = normalizeInventoryItem(steamId, item, source);
+  try {
+    const r = await client.query(
+      `INSERT INTO inventory(steam_id,item_name,item_img,item_value,rarity_color,wear,source)
+       VALUES($1,$2,$3,$4,$5,$6,$7)
+       RETURNING id, item_name, item_img, item_value, rarity_color, wear, tradable, source, acquired_at`,
+      [steamId, invItem.item_name, invItem.item_img, invItem.item_value, invItem.rarity_color, invItem.wear, source]
+    );
+    return r.rows[0];
+  } catch (e) {
+    console.warn('DB inventory insert failed, using memory:', e.message);
+    memInventory[steamId] = memInventory[steamId] || [];
+    memInventory[steamId].unshift(invItem);
+    return invItem;
+  }
+}
 
 async function getBalance(steamId) {
   try {
@@ -219,7 +256,8 @@ app.get('/api/inventory', requireAuth, async (req, res) => {
     );
     res.json({ items: r.rows });
   } catch(e) {
-    res.json({ items: [] });
+    const items = (memInventory[req.session.steamId] || []).slice(0, 200);
+    res.json({ items });
   }
 });
 
@@ -377,13 +415,12 @@ app.post('/api/battles/:id/finish', requireAuth, async (req, res) => {
         'UPDATE battle_players SET skins_json=$1, total_won=$2 WHERE battle_id=$3 AND steam_id=$4',
         [JSON.stringify(r.skins), r.totalWon, battleId, r.steamId]
       );
-      // Save skins to inventory
-      for (const skin of r.skins) {
-        await client.query(
-          'INSERT INTO inventory(steam_id,item_name,item_img,item_value,wear,source) VALUES($1,$2,$3,$4,$5,$6)',
-          [r.steamId, skin.name, skin.img, skin.val, skin.wear||'', 'battle']
-        );
-      }
+    }
+
+    // Winner takes all rolled skins in a case battle.
+    const prizeSkins = results.flatMap(r => r.skins || []);
+    for (const skin of prizeSkins) {
+      await addInventoryItem(winner.steamId, skin, 'battle', client);
     }
 
     // Credit winner
@@ -507,15 +544,7 @@ app.post('/api/cases/:caseId/open', requireAuth, async (req, res) => {
   const newBalance = await adjustBalance(req.session.steamId, -price);
   await logTransaction(req.session.steamId, 'case_open', -price, `Caixa: ${caseId}`);
 
-  const RARITY_COLORS = {'ri-gray':'#888888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'};
-  const rarityColor = RARITY_COLORS[item.cl] || '#4D79FF';
-
-  try {
-    await pool.query(
-      'INSERT INTO inventory(steam_id,item_name,item_img,item_value,rarity_color,wear,source) VALUES($1,$2,$3,$4,$5,$6,$7)',
-      [req.session.steamId, item.name, item.img||'', item.val, rarityColor, item.wear||'', 'case_open']
-    );
-  } catch {}
+  await addInventoryItem(req.session.steamId, item, 'case_open');
 
   req.session.user.balance = newBalance;
   res.json({ ok: true, item, balance: newBalance });

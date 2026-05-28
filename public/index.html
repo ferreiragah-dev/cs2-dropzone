@@ -969,7 +969,7 @@ function renderProfileAll(){
         <span class="profile-tag tag-verified">✓ Verificado</span>
         <span class="profile-tag tag-steam">Steam${countryFlag}</span>
         ${tradeLink?'<span class="profile-tag tag-trader">Trade Ativo</span>':''}
-        ${user.inventory&&user.inventory.length===0?'<span class="profile-tag tag-private">Inventário Privado</span>':''}
+        ${user.steamInventory&&user.steamInventory.length===0?'<span class="profile-tag tag-private">Inventário Privado</span>':''}
       </div>
     </div>
     <div style="margin-left:auto;"><button class="btn-primary" onclick="openDeposit()">+ Adicionar Saldo</button></div>`;
@@ -1050,25 +1050,26 @@ function renderMyItemsTab(){
   if(count) count.textContent = `${myPlatformItems.length} ${myPlatformItems.length===1?'item':'itens'}`;
 
   // Sort by value desc
-  const sorted = [...myPlatformItems].sort((a,b) => parseFloat(b.item_value||0) - parseFloat(a.item_value||0));
+  const sorted = [...myPlatformItems].sort((a,b) => parseFloat((b.item_value ?? b.val) || 0) - parseFloat((a.item_value ?? a.val) || 0));
 
   const RARITY_COLORS = {'ri-gold':'#FFD700','ri-purple':'#9B4DFF','ri-blue':'#4D79FF','ri-gray':'#888'};
 
   grid.innerHTML = sorted.map(item => {
-    const val = parseFloat(item.item_value||0);
-    const imgSrc = item.item_img || getSkinImg({name:item.item_name, cl:'ri-blue'});
-    const rColor = item.rarity_color || '#4D79FF';
+    const itemName = item.item_name || item.name || 'Item';
+    const val = parseFloat((item.item_value ?? item.val) || 0);
+    const imgSrc = item.item_img || item.img || getSkinImg({name:itemName, cl:item.cl||'ri-blue'});
+    const rColor = item.rarity_color || item.rarityColor || RARITY_COLORS[item.cl] || '#4D79FF';
     const src = imgSrc.startsWith('http') ? imgSrc : imgSrc;
     const fallback = '/img/skins/ak47_bloodsport.png';
     const sourceIcon = item.source === 'battle' ? '⚔' : '🎁';
     const sourceLabel = item.source === 'battle' ? 'Batalha' : 'Caixa';
 
-    return`<div class="inv-item" style="border-bottom:3px solid ${rColor};" title="${item.item_name}">
+    return`<div class="inv-item" style="border-bottom:3px solid ${rColor};" title="${itemName}">
       <div style="position:absolute;top:4px;right:5px;font-size:9px;background:var(--bg-deep);border-radius:3px;padding:1px 4px;color:var(--text-dim);">${sourceIcon} ${sourceLabel}</div>
-      <img class="inv-item-img" src="${src}" alt="${item.item_name}"
+      <img class="inv-item-img" src="${src}" alt="${itemName}"
            onerror="if(this.src!=='${fallback}')this.src='${fallback}'"
            style="width:80px;height:62px;object-fit:contain;margin:0 auto 4px;display:block;">
-      <div class="inv-item-name" style="font-size:10px;font-weight:600;color:var(--text);line-height:1.2;text-align:center;">${item.item_name}</div>
+      <div class="inv-item-name" style="font-size:10px;font-weight:600;color:var(--text);line-height:1.2;text-align:center;">${itemName}</div>
       <div style="font-size:9px;color:var(--text-dim);text-align:center;margin-top:1px;">${item.wear||''}</div>
       <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);text-align:center;margin-top:4px;">${fmt(val)}</div>
     </div>`;
@@ -1104,10 +1105,10 @@ function renderInventoryTab(){
 async function refreshInventory(){
   showNotif('Atualizando inventário…','info');
   try{
-    const r=await fetch('/api/inventory/refresh');
+    const r=await fetch('/api/steam-inventory');
     const d=await r.json();
     if(d.error){showNotif('Inventário privado ou inacessível.','error');return;}
-    user.inventory=d.items;
+    user.steamInventory=d.items;
     renderInventoryTab();
     showNotif(`${d.items.length} itens carregados! ✓`,'success');
   }catch(e){showNotif('Erro ao atualizar inventário.','error');}
@@ -1499,7 +1500,7 @@ function doSpin(b){
       // API call
       const playerResults=filledIdxs.map(pi=>({
         steamId: b.players[pi]?.steamId||null,
-        skins: playerSkins[pi].map(s=>({name:s.skin.name,img:getSkinImg(s.skin),val:s.val,wear:WEARS_FULL[WEARS.indexOf(s.wear)]||s.wear})),
+        skins: playerSkins[pi].map(s=>({name:s.skin.name,img:getSkinImg(s.skin),val:s.val,wear:WEARS_FULL[WEARS.indexOf(s.wear)]||s.wear,cl:s.skin.cl})),
         totalWon: playerTotals[pi]||0,
       }));
 
