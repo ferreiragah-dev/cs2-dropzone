@@ -731,6 +731,24 @@ const CASES=[
   {id:'clutch',name:'Clutch Case',price:7.60,color:'ci-orange',img:'/img/cases/clutch.png'},
   {id:'spectrum2',name:'Spectrum 2 Case',price:55.00,color:'ci-gold',img:'/img/cases/spectrum2.png'},
 ];
+
+// ── Robust skin image helper ────────────────────────────────────────────────
+// Returns src with automatic fallback chain: local → fallback skin of same rarity
+const FALLBACK_IMGS = {
+  'ri-gray':   '/img/skins/ak47_bloodsport.png',
+  'ri-blue':   '/img/skins/p90_asiimov.png',
+  'ri-purple': '/img/skins/usps_printstream.png',
+  'ri-gold':   '/img/skins/butterfly_fade.png',
+};
+function getSkinImg(skin){
+  return skin?.img || FALLBACK_IMGS[skin?.cl] || '/img/skins/ak47_bloodsport.png';
+}
+function imgWithFallback(skin, style=''){
+  const src = getSkinImg(skin);
+  const fb  = FALLBACK_IMGS[skin?.cl||'ri-blue'] || '/img/skins/ak47_bloodsport.png';
+  return `<img src="${src}" style="${style}" onerror="if(this.src!=='${fb}')this.src='${fb}'">`;
+}
+
 const SKINS=[
   {name:'AK-47 | Asiimov',val:180,cl:'ri-purple',img:'/img/skins/ak47_asiimov.png'},
   {name:'AWP | Asiimov',val:95,cl:'ri-purple',img:'/img/skins/awp_asiimov.png'},
@@ -1234,11 +1252,12 @@ function buildArena(b){
       ?`<img class="hc-player-av" src="${p.avatar}">`
       :`<div class="hc-player-av-init">${(p.name||'?').slice(0,2).toUpperCase()}</div>`;
     const firstSkin=rndFrom(SKINS);
-    const firstImg = firstSkin.img || SKINS[0].img;
+    const firstImg = getSkinImg(firstSkin);
+    const firstFb  = FALLBACK_IMGS[firstSkin.cl]||'/img/skins/ak47_bloodsport.png';
     return`<div class="hc-player-zone ${win?'winner-zone':''}" id="hczone_${b.id}_${i}">
       ${win?'<div class="hc-winner-crown">👑</div>':''}
       <div class="hc-skin-reveal">
-        <img class="hc-skin-img" id="hcskin_${b.id}_${i}" src="${firstImg}" style="background:var(--bg-hover);">
+        <img class="hc-skin-img" id="hcskin_${b.id}_${i}" src="${firstImg}" style="background:var(--bg-hover);" onerror="if(this.src!=='${firstFb}')this.src='${firstFb}'">
       </div>
       <div class="hc-skin-name" id="hcskinname_${b.id}_${i}">${b.status==='done'?firstSkin.name:'—'}</div>
       <div class="hc-skin-wear" id="hcskinwear_${b.id}_${i}"></div>
@@ -1326,8 +1345,9 @@ function doSpin(b){
 
       const imgEl=document.getElementById('hcskin_'+b.id+'_'+pi);
         if(imgEl){
-          imgEl.onerror=function(){this.src=SKINS.find(s=>s.cl===skin.cl)?.img||SKINS[0].img;this.onerror=null;};
-          imgEl.src=skin.img;
+          const fb=FALLBACK_IMGS[skin.cl]||'/img/skins/ak47_bloodsport.png';
+          imgEl.onerror=function(){if(this.src!==fb){this.src=fb;}this.onerror=null;};
+          imgEl.src=getSkinImg(skin);
           imgEl.classList.remove('reveal-anim');void imgEl.offsetWidth;imgEl.classList.add('reveal-anim');
         }
         const n=document.getElementById('hcskinname_'+b.id+'_'+pi);if(n) n.textContent=skin.name;
@@ -1403,8 +1423,9 @@ async function openCase(caseId){
   function makeReelItem(skin,highlight=false){
     const rc={'ri-gray':'#888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'}[skin.cl]||'#888';
     const border=highlight?`border:2px solid ${rc};box-shadow:0 0 10px ${rc}44;`:`border:1px solid ${rc}44;`;
+    const fb2=FALLBACK_IMGS[skin.cl]||'/img/skins/ak47_bloodsport.png';
     return`<div class="reel-cell" style="flex-shrink:0;width:106px;height:96px;border-radius:8px;background:var(--bg-hover);${border}display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;gap:4px;">
-      <img src="${skin.img}" style="width:68px;height:52px;object-fit:contain;" onerror="this.src='/img/skins/ak47_asiimov.png'">
+      <img src="${getSkinImg(skin)}" style="width:68px;height:52px;object-fit:contain;" onerror="if(this.src!=='${fb2}')this.src='${fb2}'">
       <div style="font-size:9px;color:${rc};text-align:center;line-height:1.1;font-weight:600;">${skin.name.split('|')[1]?.trim()||skin.name.split('|')[0]}</div>
     </div>`;
   }
@@ -1475,7 +1496,8 @@ async function openCase(caseId){
   // Show result after animation
   setTimeout(()=>{
     const rc={'ri-gray':'#888','ri-blue':'#4D79FF','ri-purple':'#9B4DFF','ri-gold':'#FFD700'}[winItem.cl]||'#9B4DFF';
-    const imgSrc=winItem.img||SKINS.find(s=>s.name===winItem.name)?.img||'/img/skins/ak47_asiimov.png';
+    const winSkinObj=SKINS.find(s=>s.name===winItem.name)||{cl:winItem.cl};
+const imgSrc=winItem.img||getSkinImg(winSkinObj);
 
     // Flash the winner cell
     const cells=document.querySelectorAll('.reel-cell');
@@ -1488,7 +1510,7 @@ async function openCase(caseId){
           <div style="position:relative;width:200px;height:170px;margin:0 auto .75rem;display:flex;align-items:center;justify-content:center;">
             <div style="position:absolute;inset:0;border-radius:50%;border:2px solid ${rc};opacity:.5;animation:rotateSlow 3s linear infinite;"></div>
             <div style="position:absolute;inset:15px;border-radius:50%;border:1px dashed ${rc};opacity:.25;animation:rotateSlow 6s linear infinite reverse;"></div>
-            <img src="${imgSrc}" style="width:160px;height:130px;object-fit:contain;position:relative;z-index:1;animation:skinReveal .5s ease;filter:drop-shadow(0 0 16px ${rc}66);" onerror="this.src='/img/skins/ak47_asiimov.png'">
+            <img src="${imgSrc}" style="width:160px;height:130px;object-fit:contain;position:relative;z-index:1;animation:skinReveal .5s ease;filter:drop-shadow(0 0 16px ${rc}66);" onerror="const fb=FALLBACK_IMGS[winItem?.cl]||'/img/skins/ak47_bloodsport.png';if(this.src!==fb)this.src=fb;">
           </div>
           <div style="font-size:16px;font-weight:700;color:${rc};margin-bottom:2px;">${winItem.name}</div>
           <div style="font-size:12px;color:var(--text-dim);margin-bottom:.4rem;">${winItem.wear||''}</div>
