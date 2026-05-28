@@ -541,27 +541,6 @@ app.get('/api/steam-inventory', requireAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // IMAGENS — proxy com cache no DB
 // ═══════════════════════════════════════════════════════════════════════════════
-const IMAGE_HASHES = {
-  'cases/prisma':     'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3cV6vT9avBvefWWDDGTxbZ14rhsTX7qkE90sDiHwt2pdC-TblJ2DsB1QPlK7Ee9riHKAA',
-  'cases/revolution': 'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_frnAVvfb6aqduc_TFVjTCxbx05OU4S3jilE9w4DzRnImtIy2Sa1JzDJEhRPlK7EcO4U8gfA',
-  'cases/fracture':   'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3QV7aD7OP01IfbGDzPCmbsm4LU5GnvkzUsi4WvUmIqtci_CPQNyApsjE_lK7EfrhW545A',
-  'cases/riptide':    'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3sVtvD2O_Q9dqfEXTWSlepz4bA5THnikx915z6BytmuIHiXaAdyDpEhTflK7EdW-TaRMg',
-  'cases/snakebite':  'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3oVvvT4bfI4dvTLCGTCmLl16ec7TX_mk08k42iHwtqscy-WPVUmCZJ4R_lK7Ed8Q6OYtw',
-  'cases/clutch':     'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_frHsVtqr8a_dsdKTAWDWVxLgjsrAwHSvgwEQk4m-ByYuqIC2eO1VyD5QiR_lK7EcxQQPYQA',
-  'cases/spectrum2':  'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_frHoVu6D7PaA0JaDACjKUwOom47VrTSzrw0Vx4W_Sydz9JC7FZgckCZYjRPlK7EcPuDAQzw',
-  'skins/ak47_asiimov':        '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWnBB0ucl93-rB_I20jlGx_kVlNjmkdI6LcFI4MlMkuA',
-  'skins/awp_asiimov':         '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7jEp9-k2lLi_UdvZmimcdKRMlhkGYGV2w',
-  'skins/ak47_fireserpent':    '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1hL_CoN_2ilDt_UJvYWilINeLMlhJ9XNgpw',
-  'skins/deagle_blaze':        '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5MB1i7mTpd6h0VK2_kI-ZWykd9KRMlhqMXGmEA',
-  'skins/usps_printstream':    '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fAo9_y3VDi_UY6ZWundYWXdlhiNfEHKg',
-  'skins/m4a1s_printstream':   '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNLnWm3lS5cB1g7fF9tWk3FDi_UY9YW6ndYWXcFhiNfEtYw',
-  'skins/butterfly_fade':      '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7zHotyh3Fri_UVpZm6icddKXMlhBDPsHoA',
-  'skins/p90_asiimov':         '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7TUo9mi2FDs-UVpYmincdKXMlhniPIFzw',
-  'skins/ak47_bloodsport':     '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujNbCFnzpS5cB1i7-Bp4ms3lfi_kduZGqhd4-RMlhcjCR5tg',
-  'skins/glock_fade':          '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1g7rFpYqijlHh-kc-Nj-nddeLMlhuMtfF4A',
-  'skins/karambit_doppler':    '-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I4hwwW1RiZiFlFsIWhBR3ePTHsHJe1o6-xmDaQJFHS5u3mNjjNBRRYTn7pIOS1uKkJGJiZDlHtImxwNiKwqujYbnWn3lS5cB1hLzAoNus3Fri_0VuMmrxdYSWdA1rjg7V-tA',
-};
-
 const fs_module = require('fs');
 const imgMemCache = {};
 
@@ -569,25 +548,24 @@ app.get('/img/:type/:name', async (req, res) => {
   const key = `${req.params.type}/${req.params.name.replace('.png','')}`;
   const diskPath = path.join(__dirname, 'public', 'img', req.params.type, req.params.name.replace('.png','') + '.png');
 
-  // 1. Serve from disk if exists
-  if (fs_module.existsSync(diskPath)) {
+  // 1. Disk (fastest)
+  if (fs_module.existsSync(diskPath) && fs_module.statSync(diskPath).size > 500) {
     res.set('Cache-Control','public,max-age=86400');
     return res.sendFile(diskPath);
   }
 
-  // 2. Try memory cache
+  // 2. Memory cache
   if (imgMemCache[key]) {
     res.set('Content-Type','image/png');res.set('Cache-Control','public,max-age=86400');
     return res.send(imgMemCache[key]);
   }
 
-  // 3. Try DB cache
+  // 3. DB cache → restore to disk
   try {
     const cached = await pool.query('SELECT data,content_type FROM image_cache WHERE key=$1', [key]);
-    if (cached.rows[0]?.data) {
+    if (cached.rows[0]?.data && cached.rows[0].data.length > 500) {
       const buf = Buffer.from(cached.rows[0].data);
       imgMemCache[key] = buf;
-      // Also save to disk for next time
       fs_module.mkdirSync(path.dirname(diskPath), {recursive:true});
       fs_module.writeFileSync(diskPath, buf);
       res.set('Content-Type', cached.rows[0].content_type||'image/png');
@@ -596,30 +574,26 @@ app.get('/img/:type/:name', async (req, res) => {
     }
   } catch {}
 
-  // 4. Fetch from Steam and cache
-  const hash = IMAGE_HASHES[key];
-  if (!hash) return res.status(404).send('');
-
-  try {
-    const url = `https://steamcommunity-a.akamaihd.net/economy/image/${hash}/200fx200f`;
-    const r = await axios.get(url, {
-      responseType:'arraybuffer', timeout:10000,
-      headers:{'User-Agent':'Mozilla/5.0','Referer':'https://steamcommunity.com'}
-    });
-    const buf = Buffer.from(r.data);
-    const ct = r.headers['content-type']||'image/png';
-    imgMemCache[key] = buf;
-    // Save to disk
-    fs_module.mkdirSync(path.dirname(diskPath), {recursive:true});
-    fs_module.writeFileSync(diskPath, buf);
-    // Save to DB
-    pool.query('INSERT INTO image_cache(key,url,data,content_type) VALUES($1,$2,$3,$4) ON CONFLICT(key) DO UPDATE SET data=EXCLUDED.data,cached_at=NOW()',
-      [key, url, buf, ct]).catch(()=>{});
-    res.set('Content-Type',ct);res.set('Cache-Control','public,max-age=86400');
-    res.send(buf);
-  } catch (e) {
-    res.status(502).send('');
+  // 4. Try to download now (case or skin)
+  const caseHash = CASE_HASHES[key];
+  if (caseHash) {
+    try {
+      const url = `https://steamcommunity-a.akamaihd.net/economy/image/${caseHash}/200fx200f`;
+      const r = await axios.get(url, { responseType:'arraybuffer', timeout:10000, headers:{'User-Agent':'Mozilla/5.0','Referer':'https://steamcommunity.com'} });
+      const buf = Buffer.from(r.data);
+      if (buf.length > 500) {
+        imgMemCache[key] = buf;
+        fs_module.mkdirSync(path.dirname(diskPath), {recursive:true});
+        fs_module.writeFileSync(diskPath, buf);
+        pool.query('INSERT INTO image_cache(key,url,data,content_type) VALUES($1,$2,$3,$4) ON CONFLICT(key) DO UPDATE SET data=EXCLUDED.data,cached_at=NOW()', [key,'',buf,'image/png']).catch(()=>{});
+        res.set('Content-Type','image/png');res.set('Cache-Control','public,max-age=86400');
+        return res.send(buf);
+      }
+    } catch {}
   }
+
+  // For skins, redirect to a known working skin as fallback
+  return res.redirect('/img/skins/ak47_bloodsport.png');
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -647,8 +621,127 @@ function parseInventory(json) {
 app.get('*', (req, res) => res.sendFile(path.join(__dirname,'public','index.html')));
 
 // ── Start ─────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// STARTUP — Auto-download/restore images
+// ═══════════════════════════════════════════════════════════════════════════════
+const CASE_HASHES = {
+  'cases/prisma':    'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3cV6vT9avBvefWWDDGTxbZ14rhsTX7qkE90sDiHwt2pdC-TblJ2DsB1QPlK7Ee9riHKAA',
+  'cases/revolution':'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_frnAVvfb6aqduc_TFVjTCxbx05OU4S3jilE9w4DzRnImtIy2Sa1JzDJEhRPlK7EcO4U8gfA',
+  'cases/dreams':    'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_frnIV7Kb5OaU-JqfHDzXFle0u4LY8Gy_kkRgisGzcm4v4J3vDOAQmDMdyRvlK7EcmeCU3yw',
+  'cases/fracture':  'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3QV7aD7OP01IfbGDzPCmbsm4LU5GnvkzUsi4WvUmIqtci_CPQNyApsjE_lK7EfrhW545A',
+  'cases/riptide':   'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3sVtvD2O_Q9dqfEXTWSlepz4bA5THnikx915z6BytmuIHiXaAdyDpEhTflK7EdW-TaRMg',
+  'cases/snakebite': 'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_fr3oVvvT4bfI4dvTLCGTCmLl16ec7TX_mk08k42iHwtqscy-WPVUmCZJ4R_lK7Ed8Q6OYtw',
+  'cases/clutch':    'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_frHsVtqr8a_dsdKTAWDWVxLgjsrAwHSvgwEQk4m-ByYuqIC2eO1VyD5QiR_lK7EcxQQPYQA',
+  'cases/spectrum2': 'i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGJKz2lu_XsnXwtmkJjSU91dh8bj35VTqVBP4io_frHoVu6D7PaA0JaDACjKUwOom47VrTSzrw0Vx4W_Sydz9JC7FZgckCZYjRPlK7EcPuDAQzw',
+};
+
+const SKIN_QUERIES = [
+  ['skins/ak47_asiimov',        'AK-47 | Asiimov (Field-Tested)'],
+  ['skins/awp_asiimov',         'AWP | Asiimov (Field-Tested)'],
+  ['skins/m4a1s_printstream',   'M4A1-S | Printstream (Factory New)'],
+  ['skins/usps_printstream',    'USP-S | Printstream (Factory New)'],
+  ['skins/ak47_bloodsport',     'AK-47 | Bloodsport (Factory New)'],
+  ['skins/p90_asiimov',         'P90 | Asiimov (Field-Tested)'],
+  ['skins/butterfly_fade',      'Butterfly Knife | Fade (Factory New)'],
+  ['skins/glock_fade',          'Glock-18 | Fade (Factory New)'],
+  ['skins/deagle_blaze',        'Desert Eagle | Blaze (Factory New)'],
+  ['skins/karambit_doppler',    'Karambit | Doppler (Factory New)'],
+  ['skins/ak47_fireserpent',    'AK-47 | Fire Serpent (Field-Tested)'],
+  ['skins/awp_medusa',          'AWP | Medusa (Field-Tested)'],
+  ['skins/m4a4_howl',           'M4A4 | Howl (Field-Tested)'],
+  ['skins/fiveseven_hyperbeast','Five-SeveN | Hyper Beast (Factory New)'],
+  ['skins/glock_waterelemental','Glock-18 | Water Elemental (Factory New)'],
+  ['skins/m4a1s_nightmare',     'M4A1-S | Nightmare (Factory New)'],
+  ['skins/awp_hyperbeast',      'AWP | Hyper Beast (Factory New)'],
+  ['skins/ak47_neonrider',      'AK-47 | Neon Rider (Factory New)'],
+  ['skins/m4a4_neonoir',        'M4A4 | Neo-Noir (Factory New)'],
+  ['skins/usp_caiman',          'USP-S | Caiman (Factory New)'],
+];
+
+async function ensureImages() {
+  const HDR = { 'User-Agent':'Mozilla/5.0','Referer':'https://steamcommunity.com/market/' };
+  let restored = 0, downloaded = 0, skipped = 0;
+
+  async function saveImg(key, buf, ct) {
+    const diskPath = path.join(__dirname, 'public', 'img', key + '.png');
+    fs_module.mkdirSync(path.dirname(diskPath), { recursive: true });
+    fs_module.writeFileSync(diskPath, buf);
+    // Save to DB for persistence across restarts
+    try {
+      await pool.query(
+        `INSERT INTO image_cache(key,url,data,content_type) VALUES($1,$2,$3,$4)
+         ON CONFLICT(key) DO UPDATE SET data=EXCLUDED.data, cached_at=NOW()`,
+        [key, '', buf, ct || 'image/png']
+      );
+    } catch {}
+  }
+
+  async function fetchFromSteam(hash) {
+    const url = `https://steamcommunity-a.akamaihd.net/economy/image/${hash}/200fx200f`;
+    const r = await axios.get(url, { responseType:'arraybuffer', timeout:12000, headers: HDR });
+    if (r.data.byteLength < 500) throw new Error('empty');
+    return Buffer.from(r.data);
+  }
+
+  // Process cases (known hashes)
+  for (const [key, hash] of Object.entries(CASE_HASHES)) {
+    const diskPath = path.join(__dirname, 'public', 'img', key + '.png');
+    if (fs_module.existsSync(diskPath) && fs_module.statSync(diskPath).size > 500) { skipped++; continue; }
+    // Try DB first
+    try {
+      const row = await pool.query('SELECT data FROM image_cache WHERE key=$1', [key]);
+      if (row.rows[0]?.data) {
+        const buf = Buffer.from(row.rows[0].data);
+        fs_module.mkdirSync(path.dirname(diskPath), { recursive: true });
+        fs_module.writeFileSync(diskPath, buf);
+        restored++; continue;
+      }
+    } catch {}
+    // Download from Steam
+    try {
+      const buf = await fetchFromSteam(hash);
+      await saveImg(key, buf, 'image/png');
+      downloaded++;
+    } catch(e) { console.warn(`img fail ${key}: ${e.message}`); }
+  }
+
+  // Process skins (need to search Steam Market for hash)
+  for (const [key, query] of SKIN_QUERIES) {
+    const diskPath = path.join(__dirname, 'public', 'img', key + '.png');
+    if (fs_module.existsSync(diskPath) && fs_module.statSync(diskPath).size > 500) { skipped++; continue; }
+    // Try DB first
+    try {
+      const row = await pool.query('SELECT data FROM image_cache WHERE key=$1', [key]);
+      if (row.rows[0]?.data) {
+        const buf = Buffer.from(row.rows[0].data);
+        fs_module.mkdirSync(path.dirname(diskPath), { recursive: true });
+        fs_module.writeFileSync(diskPath, buf);
+        restored++; continue;
+      }
+    } catch {}
+    // Search Steam Market for hash then download
+    try {
+      await new Promise(r => setTimeout(r, 300));
+      const searchRes = await axios.get('https://steamcommunity.com/market/search/render/', {
+        params: { query, appid: 730, count: 1, norender: 1 },
+        headers: HDR, timeout: 10000,
+      });
+      const item = searchRes.data?.results?.[0];
+      if (!item?.asset_description?.icon_url) throw new Error('not found');
+      const buf = await fetchFromSteam(item.asset_description.icon_url);
+      await saveImg(key, buf, 'image/png');
+      downloaded++;
+    } catch(e) { console.warn(`skin fail ${key}: ${e.message}`); }
+  }
+
+  if (downloaded > 0 || restored > 0)
+    console.log(`✓ Images: ${skipped} skip, ${restored} restored from DB, ${downloaded} downloaded`);
+}
+
 app.listen(PORT, async () => {
   await initDB();
+  // Restore/download images in background (non-blocking)
+  ensureImages().catch(e => console.warn('ensureImages error:', e.message));
   console.log(`\n🎮 DROPZONE v2 rodando em ${BASE}`);
   console.log(`   PostgreSQL: ${process.env.DATABASE_URL ? '✓' : '✗ DATABASE_URL não configurada'}`);
   console.log(`   Steam Key : ${STEAM_API_KEY ? '✓' : '✗ não configurada'}\n`);
