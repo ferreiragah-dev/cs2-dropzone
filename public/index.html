@@ -1307,7 +1307,7 @@ function selPlayers(n,el){
 
 function renderCasesGrid(){
   document.getElementById('casesGrid').innerHTML=CASES.map(c=>`
-    <div class="case-item ${selCases[c.id]>0?'selected':''}" id="ci_${c.id}">
+    <div class="case-item ${selCases[c.id]>0?'selected':''}" id="ci_${c.id}" onclick="chQty('${c.id}',1,event)">
       <div class="case-visual" style="background:none;"><img src="${c.img}" style="width:56px;height:44px;object-fit:contain;" onerror="this.src=''"></div>
       <div class="case-name">${c.name}</div>
       <div class="case-price">${fmt(c.price)}</div>
