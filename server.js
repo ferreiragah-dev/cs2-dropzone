@@ -61,9 +61,11 @@ async function logTransaction(steamId, type, amount, description) {
       [steamId, type, amount, description]);
   } catch {} // non-critical
 }
+
+const requireAuth = (req, res, next) => {
   if (!req.session.steamId) return res.status(401).json({ error: 'Não autenticado' });
   next();
-;
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STEAM OPENID
