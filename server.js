@@ -85,6 +85,33 @@ async function ensureHouseBot(client = pool) {
   );
 }
 
+async function ensureSessionUser(req, client = pool) {
+  const steamId = req.session.steamId;
+  if (!steamId) return null;
+  const sessionUser = req.session.user || {};
+  const name = sessionUser.name || 'Jogador';
+  const avatar = sessionUser.avatar || '';
+  await client.query(
+    `INSERT INTO users (steam_id, name, avatar, profile_url, country_code, real_name, steam_level, balance, last_login)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+     ON CONFLICT (steam_id) DO UPDATE SET
+       name=COALESCE(NULLIF(EXCLUDED.name,''), users.name),
+       avatar=COALESCE(NULLIF(EXCLUDED.avatar,''), users.avatar),
+       last_login=NOW()`,
+    [
+      steamId,
+      name,
+      avatar,
+      sessionUser.profileUrl || '',
+      sessionUser.countryCode || '',
+      sessionUser.realName || '',
+      sessionUser.steamLevel || 0,
+      numOrNull(sessionUser.balance) ?? 500,
+    ]
+  );
+  return steamId;
+}
+
 async function getBalance(steamId) {
   try {
     const r = await pool.query('SELECT balance FROM users WHERE steam_id=$1', [steamId]);
@@ -130,7 +157,8 @@ async function spendBalance(req, amount, client = pool, lockedDbBalance = null) 
 
   const newBalance = balance - amount;
   try {
-    await client.query('UPDATE users SET balance=$1 WHERE steam_id=$2', [newBalance, steamId]);
+    const r = await client.query('UPDATE users SET balance=$1 WHERE steam_id=$2 RETURNING balance', [newBalance, steamId]);
+    if (!r.rows[0]) throw new Error('Usuário não encontrado para atualizar saldo');
   } catch (e) {
     console.warn('DB balance spend failed, using memory:', e.message);
   }
@@ -382,34 +410,49 @@ app.post('/api/battles', requireAuth, async (req, res) => {
   const totalValue = cases.reduce((s,c) => s+c.price, 0) * playerCount;
   const userCost = cases.reduce((s,c) => s+c.price, 0);
 
-  const spent = await spendBalance(req, userCost);
-  if (!spent.ok) return res.status(400).json({ error: 'Saldo insuficiente' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await ensureSessionUser(req, client);
+    if (botMode) await ensureHouseBot(client);
 
-  await logTransaction(req.session.steamId, 'battle_loss', -userCost, 'Entrada em batalha');
+    const balRes = await client.query('SELECT balance FROM users WHERE steam_id=$1 FOR UPDATE', [req.session.steamId]);
+    const spent = await spendBalance(req, userCost, client, balRes.rows[0]?.balance);
+    if (!spent.ok) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Saldo insuficiente' });
+    }
 
-  if (botMode) await ensureHouseBot();
-
-  // Create battle
-  const battleRes = await pool.query(
-    'INSERT INTO battles(player_count,cases_json,total_value,created_by,status) VALUES($1,$2,$3,$4,$5) RETURNING *',
-    [playerCount, JSON.stringify(cases), totalValue, req.session.steamId, botMode ? 'live' : 'open']
-  );
-  const battle = battleRes.rows[0];
-
-  // Add creator as slot 0
-  await pool.query(
-    'INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)',
-    [battle.id, req.session.steamId, 0]
-  );
-
-  if (botMode) {
-    await pool.query(
-      'INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)',
-      [battle.id, HOUSE_BOT.steamId, 1]
+    const battleRes = await client.query(
+      'INSERT INTO battles(player_count,cases_json,total_value,created_by,status) VALUES($1,$2,$3,$4,$5) RETURNING *',
+      [playerCount, JSON.stringify(cases), totalValue, req.session.steamId, botMode ? 'live' : 'open']
     );
-  }
+    const battle = battleRes.rows[0];
 
-  res.json({ ok: true, battleId: battle.id, balance: spent.balance, status: battle.status, botMode: !!botMode });
+    await client.query(
+      'INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)',
+      [battle.id, req.session.steamId, 0]
+    );
+
+    if (botMode) {
+      await client.query(
+        'INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)',
+        [battle.id, HOUSE_BOT.steamId, 1]
+      );
+    }
+
+    await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
+      [req.session.steamId, 'battle_loss', -userCost, 'Entrada em batalha']);
+
+    await client.query('COMMIT');
+    res.json({ ok: true, battleId: battle.id, balance: spent.balance, status: battle.status, botMode: !!botMode });
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('Create battle error:', e.message);
+    res.status(500).json({ error: 'Erro ao criar batalha: '+e.message });
+  } finally {
+    client.release();
+  }
 });
 
 // Entrar em batalha
@@ -420,6 +463,7 @@ app.post('/api/battles/:id/join', requireAuth, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await ensureSessionUser(req, client);
 
     const battleRes = await client.query('SELECT * FROM battles WHERE id=$1 FOR UPDATE', [battleId]);
     const battle = battleRes.rows[0];
@@ -448,7 +492,8 @@ app.post('/api/battles/:id/join', requireAuth, async (req, res) => {
     if (!spent.ok) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Saldo insuficiente' }); }
 
     await client.query('INSERT INTO battle_players(battle_id,steam_id,slot_index) VALUES($1,$2,$3)', [battleId, steamId, nextSlot]);
-    await logTransaction(steamId, 'battle_loss', -userCost, 'Entrada em batalha #'+battleId);
+    await client.query('INSERT INTO transactions(steam_id,type,amount,description) VALUES($1,$2,$3,$4)',
+      [steamId, 'battle_loss', -userCost, 'Entrada em batalha #'+battleId]);
 
     // Check if full → start
     const newCount = usedSlots.length + 1;

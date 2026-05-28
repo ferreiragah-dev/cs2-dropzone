@@ -1848,7 +1848,7 @@ async function confirmCreate(){
       } else {
         showNotif('Batalha criada! Aguardando jogadores… ⚔','success');
       }
-    }catch(e){showNotif('Erro ao criar batalha','error');}
+    }catch(e){showNotif('Erro ao criar batalha: '+(e.message||'verifique sua conexão'),'error');}
   } else {
     // local fallback
     balance-=cost;updateBalance();
@@ -1882,7 +1882,7 @@ async function joinBattle(id,e){
       await pollBattles();
       const updated=battles.find(x=>x.id===id);
       if(updated&&updated.status==='live') setTimeout(()=>viewBattle(id,null),400);
-    }catch(e){showNotif('Erro ao entrar na batalha','error');}
+    }catch(e){showNotif('Erro ao entrar na batalha: '+(e.message||'verifique sua conexão'),'error');}
   } else {
     // local
     const ei=b.players.findIndex(p=>!p);
